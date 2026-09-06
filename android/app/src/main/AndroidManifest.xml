@@ -3,11 +3,6 @@
          never at launch, and the app is fully usable if it is refused. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
-    <!-- The LiteRT-LM runtime uses the GPU delegate where one exists and
-         falls back to CPU where it does not. Both are optional. -->
-    <uses-native-library android:name="libOpenCL.so" android:required="false"/>
-    <uses-native-library android:name="libvndksupport.so" android:required="false"/>
-
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
@@ -45,6 +40,16 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- The LiteRT-LM runtime uses the GPU delegate where one exists and
+             falls back to CPU where it does not. Both are optional, and these
+             belong inside <application>, not at manifest level. -->
+        <uses-native-library
+            android:name="libOpenCL.so"
+            android:required="false" />
+        <uses-native-library
+            android:name="libvndksupport.so"
+            android:required="false" />
     </application>
 
     <queries>

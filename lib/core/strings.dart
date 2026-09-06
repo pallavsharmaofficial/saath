@@ -24,6 +24,11 @@ class S {
   /// For code that has a [Ref] but no [BuildContext] (controllers, engines).
   static S read(Ref ref) => S._(ref.read(appStateProvider).language);
 
+  /// For widget code that has a [WidgetRef] but must not subscribe — a
+  /// callback firing outside build, for instance.
+  static S readWidget(WidgetRef ref) =>
+      S._(ref.read(appStateProvider).language);
+
   @visibleForTesting
   static S forLanguage(AppLanguage l) => S._(l);
 
@@ -111,6 +116,7 @@ class S {
         'साथ का काउंसलर एक मॉडल है जो इसी फ़ोन पर चलता है। एक बार डाउनलोड कीजिए, फिर कभी इंटरनेट की ज़रूरत नहीं — और आपकी कोई बात फ़ोन से बाहर नहीं जाती।',
       );
   String modelSize(String size) => _t('$size download', '$size डाउनलोड');
+  String get modelWifiLabel => _t('Before you start', 'शुरू करने से पहले');
   String get modelWifi => _t(
         'Use Wi-Fi. This is a large file and it will not resume on its own if the connection drops.',
         'वाई-फ़ाई पर कीजिए। फ़ाइल बड़ी है और कनेक्शन टूटने पर अपने आप दोबारा शुरू नहीं होगी।',
@@ -427,6 +433,24 @@ class S {
   String get safetyAlwaysHere => _t('Reachable any time from Settings.',
       'सेटिंग्स से कभी भी पहुँचा जा सकता है।');
   String get helplines => _t('Helplines', 'हेल्पलाइन');
+
+  // ── App lock ──────────────────────────────────────────────────────────────
+  String get appLock => _t('Lock Saath', 'साथ को लॉक करें');
+  String get appLockBody => _t(
+        'Ask for your face, fingerprint or passcode before opening Saath. Worth turning on if anyone else can pick up your phone.',
+        'साथ खोलने से पहले चेहरा, उँगली या पासकोड माँगे। अगर आपका फ़ोन कोई और भी उठा सकता है, तो इसे चालू रखिए।',
+      );
+  String get appLockOn => _t('On', 'चालू');
+  String get appLockOff => _t('Off', 'बंद');
+  String get appLockPrompt => _t('Unlock Saath', 'साथ को अनलॉक करें');
+  String get appLockUnlock => _t('Unlock', 'अनलॉक करें');
+  String get appLockLocked => _t('Saath is locked', 'साथ लॉक है');
+  String get appLockUnavailable => _t(
+        'This phone has no screen lock set up, so Saath has nothing to check against.',
+        'इस फ़ोन में कोई स्क्रीन लॉक सेट नहीं है, इसलिए साथ के पास जाँचने को कुछ नहीं।',
+      );
+  String get appLockFailed => _t('That did not match. Try again.',
+      'यह मेल नहीं खाया। दोबारा कोशिश कीजिए।');
 
   // ── Settings ──────────────────────────────────────────────────────────────
   String get settings => _t('Settings', 'सेटिंग्स');

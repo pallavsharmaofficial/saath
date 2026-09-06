@@ -272,7 +272,7 @@ class _WifiNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TintPanel(
-      label: s.modelWifi.split('.').first,
+      label: s.modelWifiLabel,
       color: context.surface.gold,
       child: Text(s.modelWifi),
     );

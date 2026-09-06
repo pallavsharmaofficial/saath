@@ -51,7 +51,17 @@ android {
     }
 
     buildTypes {
+        // NOTE: ABI selection is NOT set here. The Flutter Gradle plugin
+        // overwrites `ndk.abiFilters` from the tool's own --target-platform,
+        // so a filter in this file is a silent no-op (verified: it changed
+        // nothing in the built bundle). Release builds must pass
+        //   flutter build appbundle --release --target-platform android-arm64
+        // and docs/RELEASE.md and CI both do. Why arm64 only: flutter_gemma
+        // ships LiteRT-LM native libraries for arm64-v8a alone, so an
+        // armeabi-v7a or x86_64 build installs fine and then cannot load a
+        // model at all.
         release {
+
             signingConfig = if (hasReleaseKeystore) {
                 signingConfigs.getByName("release")
             } else {

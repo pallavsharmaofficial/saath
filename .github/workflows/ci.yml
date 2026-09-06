@@ -57,8 +57,8 @@ jobs:
           cache: true
       - run: flutter pub get
       # Unsigned: release signing needs android/key.properties, which is not
-      # in the repo. See docs/RELEASE.md.
-      - run: flutter build apk --debug
+      # in the repo. arm64 only, for the reason in docs/RELEASE.md.
+      - run: flutter build apk --debug --target-platform android-arm64
 
   ios:
     name: Build iOS

@@ -12,6 +12,7 @@ import '../features/home/today_screen.dart';
 import '../features/journal/journal_screen.dart';
 import '../features/learn/learn_screen.dart';
 import '../features/onboarding/onboarding_screens.dart';
+import '../features/pulse/weekly_pulse_screen.dart';
 import '../features/repair/repair_screens.dart';
 import '../features/safety/safety_screen.dart';
 import '../features/settings/settings_screen.dart';
@@ -43,6 +44,7 @@ class Routes {
   static const model = '/settings/model';
   static const editOrigin = '/settings/origin';
   static const journal = '/journal';
+  static const weeklyPulse = '/week';
 }
 
 final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -193,6 +195,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: 'model',
               pageBuilder: (c, s) => _fade(const ModelScreen(), s)),
         ],
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: Routes.weeklyPulse,
+        pageBuilder: (c, s) => _fade(const WeeklyPulseScreen(), s),
       ),
       GoRoute(
         parentNavigatorKey: _rootKey,

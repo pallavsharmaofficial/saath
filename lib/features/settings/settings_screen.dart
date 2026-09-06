@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../app/router.dart';
 import '../../core/app_info.dart';
+import '../../core/app_lock.dart';
 import '../../core/app_state.dart';
 import '../../core/helplines.dart';
 import '../../core/journal.dart';
@@ -29,6 +30,7 @@ class SettingsScreen extends ConsumerWidget {
     final n = ref.read(appStateProvider.notifier);
     final engine = ref.watch(counsellorEngineProvider);
     final model = ref.watch(modelManagerProvider);
+    final lock = ref.watch(appLockProvider);
     final t = Theme.of(context).textTheme;
     final surface = context.surface;
 
@@ -163,6 +165,43 @@ class SettingsScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Eyebrow(s.appLock),
+                          const SizedBox(height: 8),
+                          Text(s.appLockBody,
+                              style: t.bodySmall?.copyWith(
+                                  fontSize: 15, color: surface.ink2)),
+                          const SizedBox(height: 12),
+                          if (!lock.available)
+                            Text(s.appLockUnavailable,
+                                style: t.bodySmall?.copyWith(
+                                    fontSize: 14, color: surface.ink2))
+                          else
+                            Wrap(spacing: 8, runSpacing: 8, children: [
+                              GlassChip(
+                                label: s.appLockOn,
+                                active: lock.enabled,
+                                selectable: true,
+                                onTap: () => ref
+                                    .read(appLockProvider.notifier)
+                                    .setEnabled(true),
+                              ),
+                              GlassChip(
+                                label: s.appLockOff,
+                                active: !lock.enabled,
+                                selectable: true,
+                                onTap: () => ref
+                                    .read(appLockProvider.notifier)
+                                    .setEnabled(false),
+                              ),
+                            ]),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    GlassPanel(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Eyebrow(s.helplines),
                           const SizedBox(height: 8),
                           Text(s.safetyBody2,
@@ -284,6 +323,7 @@ class SettingsScreen extends ConsumerWidget {
 
     await ref.read(journalProvider.notifier).clear();
     ref.read(chatControllerProvider.notifier).clear();
+    await ref.read(appLockProvider.notifier).reset();
     await ref.read(appStateProvider.notifier).reset();
     if (!context.mounted) return;
     context.go(Routes.onboarding);

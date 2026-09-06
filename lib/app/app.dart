@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/app_state.dart';
 import '../theme/theme.dart';
+import 'lock_gate.dart';
 import 'router.dart';
 
 class SaathApp extends ConsumerWidget {
@@ -42,7 +43,8 @@ class SaathApp extends ConsumerWidget {
         return MediaQuery.withClampedTextScaling(
           minScaleFactor: 0.85,
           maxScaleFactor: 1.6,
-          child: child ?? const SizedBox.shrink(),
+          // Above the router, so no deep link can route around the lock.
+          child: LockGate(child: child ?? const SizedBox.shrink()),
         );
       },
     );

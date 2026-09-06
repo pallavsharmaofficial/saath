@@ -46,11 +46,40 @@ Without that file the release build falls back to the debug keystore so
 `flutter run --release` still works locally — it just cannot be uploaded.
 
 ```bash
-flutter build appbundle --release     # → build/app/outputs/bundle/release/app-release.aab
+flutter build appbundle --release --target-platform android-arm64
+# → build/app/outputs/bundle/release/app-release.aab
 ```
+
+**The `--target-platform` flag is not optional.** `flutter_gemma` ships
+LiteRT-LM native libraries for `arm64-v8a` only. Without the flag the bundle
+also carries `armeabi-v7a` and `x86_64` splits that install cleanly and then
+cannot load a model — an app whose headline feature can never work on the
+device that downloaded it. Setting `ndk.abiFilters` in `build.gradle.kts` does
+**not** work: the Flutter Gradle plugin overwrites it from this flag.
 
 R8 (`isMinifyEnabled`) and resource shrinking are on. Rules live in
 `android/app/proguard-rules.pro`.
+
+### Size, measured
+
+| | |
+|---|---|
+| AAB, arm64 only | 86.9 MB |
+| Native libraries, arm64 | 124.2 MB uncompressed |
+| — of which `libLiteRtLm.so` | 25.9 MB |
+| — of which Qualcomm QNN HTP skels | ~40 MB across four chip generations |
+| Gemma 3 1B model | 584 MB |
+| Gemma 3n E2B model | 3.7 GB |
+
+So the smallest realistic path to a working counsellor is roughly **670 MB**:
+an ~85 MB install, then a 584 MB download. That is a real barrier in the
+market this is aimed at, and it is worth a decision rather than a shrug.
+
+The one lever that has not been pulled: excluding `libQnnHtp*Skel.so` via
+`packagingOptions.jniLibs.excludes` would cut about 40 MB from the install, at
+the cost of Qualcomm NPU acceleration — on a market that is largely Snapdragon,
+that is a straight trade of download size against tokens per second. Measure it
+on the week-1 spike devices before deciding.
 
 ## iOS
 
