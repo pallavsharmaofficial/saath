@@ -275,6 +275,39 @@ class GemmaCounsellorEngine implements CounsellorEngine {
   }
 
   @override
+  Future<String> reflectOnEntry({
+    required String title,
+    required String body,
+    required String ask,
+    required DateTime savedAt,
+    required CounsellorContext ctx,
+  }) async {
+    if (body.trim().isEmpty) {
+      throw const CounsellorException('nothing to reflect on');
+    }
+    final raw = await _serialised(
+      () => _oneShot(
+        Prompts.reflectOnEntry(
+          title: title,
+          body: body,
+          ask: ask,
+          daysAgo: DateTime.now().difference(savedAt).inDays,
+          ctx: ctx,
+        ),
+        ctx,
+      ),
+    );
+    final json = Prompts.extractJson(raw);
+    final reflection =
+        json == null ? '' : Prompts.stringField(json, 'reflection');
+    if (reflection.isEmpty) {
+      throw const CounsellorException(
+          'the model did not return a usable answer');
+    }
+    return reflection;
+  }
+
+  @override
   Future<WeeklyReflection> weeklyReflection({
     required List<int> scores,
     required List<String> words,

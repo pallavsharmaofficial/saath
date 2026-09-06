@@ -375,6 +375,67 @@ class S {
       'आपकी लिखी जा चुकी है। जब $p अपनी लिखेंगे, तो किसी एक शाम दोनों साथ मिलकर खोलिएगा — जब दोनों तैयार हों।');
   String get planTheReveal => _t('Plan the reveal', 'खोलने की योजना बनाएँ');
   String get loveMap => _t('Love map', 'लव मैप');
+  String get loveMapSub => _t(
+        'The questions are the point. Most people cannot name what they do not know.',
+        'सवाल ही असली बात हैं। ज़्यादातर लोग यह नहीं बता पाते कि वे क्या नहीं जानते।',
+      );
+
+  /// Ten love-map prompts, asked about the partner by name.
+  List<String> loveMapPrompts(String p) => [
+        _t('What is $p worried about right now?',
+            'अभी $p किस बात से परेशान हैं?'),
+        _t('What small thing makes $p’s day better?',
+            'कौन-सी छोटी बात $p का दिन बेहतर कर देती है?'),
+        _t('Who does $p turn to when it is bad?',
+            'बुरे वक़्त में $p किसके पास जाते हैं?'),
+        _t('What is $p secretly proud of?',
+            '$p किस बात पर चुपचाप गर्व करते हैं?'),
+        _t('What does $p find hardest about their family?',
+            'अपने परिवार में $p को सबसे मुश्किल क्या लगता है?'),
+        _t('What would $p do with a free Sunday?',
+            'एक ख़ाली रविवार मिले तो $p क्या करेंगे?'),
+        _t('What is $p most afraid of losing?',
+            '$p को सबसे ज़्यादा किसे खोने का डर है?'),
+        _t('Where would $p go, anywhere at all?',
+            'कहीं भी जा सकें तो $p कहाँ जाएँगे?'),
+        _t('What did $p want to be at fifteen?',
+            'पंद्रह साल की उम्र में $p क्या बनना चाहते थे?'),
+        _t('What does $p wish you asked about more?',
+            '$p चाहते हैं कि आप किस बारे में और पूछें?'),
+      ];
+
+  String get loveMapAnswer => _t('Your answer', 'आपका जवाब');
+  String get loveMapUnanswered => _t('Not yet', 'अभी नहीं');
+  String loveMapProgress(int known, int total) =>
+      _t('$known of $total', '$total में से $known');
+  String get loveMapAsk => _t('Ask, don’t guess', 'पूछिए, अंदाज़ा मत लगाइए');
+
+  String get goals => _t('Shared goals', 'साझा लक्ष्य');
+  String get goalAdd => _t('Add a goal', 'लक्ष्य जोड़ें');
+  String get goalHint => _t(
+        'Something small and this week. "One phone-free dinner" beats "communicate better".',
+        'कुछ छोटा और इसी हफ़्ते का। "एक फ़ोन-मुक्त डिनर" — "बेहतर बात करें" से बेहतर है।',
+      );
+  String get goalsEmpty => _t('Nothing set yet.', 'अभी कुछ तय नहीं।');
+  String get goalDone => _t('Done', 'पूरा हुआ');
+  String get goalRemove => _t('Remove', 'हटाएँ');
+
+  String get dates => _t('Dates that matter', 'ख़ास तारीख़ें');
+  String get dateAdd => _t('Add a date', 'तारीख़ जोड़ें');
+  String get dateLabel => _t('What is it?', 'यह क्या है?');
+  String get dateLabelHint =>
+      _t('Anniversary, their birthday…', 'सालगिरह, उनका जन्मदिन…');
+  String get datesEmpty => _t(
+        'None yet. Saath will remind you here — on this phone, no account needed.',
+        'अभी कोई नहीं। साथ आपको यहीं याद दिलाएगा — इसी फ़ोन पर, बिना किसी अकाउंट के।',
+      );
+  String daysAway(int days) => switch (days) {
+        0 => _t('today', 'आज'),
+        1 => _t('tomorrow', 'कल'),
+        _ => _t('in $days days', '$days दिन में'),
+      };
+  String nthYear(int n) => _t('$n years', '$n साल');
+  String get remove => _t('Remove', 'हटाएँ');
   String currentStress(String p) =>
       _t('$p’s current stress', '$p का मौजूदा तनाव');
   String smallJoy(String p) => _t('$p’s small joy', '$p की छोटी ख़ुशी');
@@ -411,6 +472,12 @@ class S {
       'Nothing saved yet. Untangle something and tap Save.',
       'अभी कुछ सहेजा नहीं। कुछ सुलझाइए और सहेजें दबाइए।');
   String get deleteEntry => _t('Delete this entry', 'यह प्रविष्टि मिटाएँ');
+  String get journalReflect =>
+      _t('What does this look like now?', 'अब यह कैसा लगता है?');
+  String get journalReflecting => _t('Reading it back…', 'दोबारा पढ़ रहा हूँ…');
+  String get journalReflection => _t('Looking back', 'पीछे मुड़कर');
+  String get journalTags => _t('What was it about?', 'यह किस बारे में था?');
+  String get journalTrends => _t('Last 30 days', 'पिछले 30 दिन');
   String get entryDeleted => _t('Deleted', 'मिट गया');
 
   // ── Safety ────────────────────────────────────────────────────────────────

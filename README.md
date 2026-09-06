@@ -3,10 +3,10 @@
 An AI relationship counsellor that runs entirely on the phone. Free, private,
 offline. Flutter, iOS 16+ and Android 10+.
 
-> **What this build is:** the complete front end, running on a *scripted
-> preview engine*. No AI model runs on the device yet. See
-> [docs/LAUNCH-READINESS.md](docs/LAUNCH-READINESS.md) for the honest gap
-> between this and v1.
+> **What this build is:** everything that works on one phone, including the
+> on-device Gemma counsellor. What is missing is the couple layer — pairing,
+> encryption, sync — and a host to serve the model files from. See
+> [docs/LAUNCH-READINESS.md](docs/LAUNCH-READINESS.md).
 
 ## Run it
 
@@ -19,19 +19,20 @@ Both platform folders are checked in. There is no `flutter create` step.
 
 ```bash
 flutter analyze --fatal-infos --fatal-warnings   # must be clean
-flutter test                                     # 171 tests
+flutter test                                     # 242 tests
 ```
 
 ## Layout
 
 ```
 lib/
-  app/        router (one stable GoRouter), tab shell, MaterialApp
+  app/        router (one stable GoRouter), tab shell, lock gate, MaterialApp
   theme/      tokens (palette, SurfaceTokens, StageTokens), typography, ThemeData
-  ui/         Atmosphere (photo + veil + fades), Frost/glass components
-  core/       app state, journal, key-value store, strings (EN/HI), helplines
-  features/   onboarding, home, counsellor, untangle, repair, couple,
-              journal, learn, safety, settings
+  ui/         Atmosphere (photo + veil + fades), Frost/glass, text prompt
+  core/       app state, journal, couple space, app lock, key-value store,
+              strings (EN/HI), helplines
+  features/   onboarding, home, counsellor (+ model, voice), untangle, repair,
+              couple, journal, pulse, learn, safety, settings
 assets/
   backgrounds/  placeholder colour fields — swap for real photos, same filenames
   fonts/        Sora, Source Serif 4, Noto Serif Devanagari (subset, variable)
@@ -64,14 +65,36 @@ Hindi resolves even inside an English paragraph.
 
 ## AI engine
 
-`features/counsellor/engine.dart` defines `CounsellorEngine`. The app runs
-`MockCounsellorEngine` (scripted) so every screen is testable today. The Gemma
-engine replaces it via `counsellorEngineProvider` after the model spike — no UI
-changes.
+`features/counsellor/engine.dart` defines `CounsellorEngine`. Two
+implementations sit behind it and the UI knows about neither:
+
+- `GemmaCounsellorEngine` — flutter_gemma on LiteRT-LM, used whenever a model
+  is installed. The chat session is kept alive and fed only new messages;
+  rebuilding it per turn re-prefills the whole conversation, which on a 4 GB
+  phone is the difference between a two-second wait and fifteen.
+- `MockCounsellorEngine` — scripted, in both languages, used when no model is
+  loadable. Onboarding, Learn and the helplines all have to work before a
+  3.7 GB download finishes, and on a phone where it never will.
+
+Prompts live in one file, `model/prompts.dart`, meant to be readable end to end
+as writing rather than as code. Untangle, the Repair merge, Say it kinder and
+the weekly reflection are all JSON-constrained: structure is both more
+trustworthy and far easier for a 1B model than open advice.
+
+**The model files need a host.** Both upstream Hugging Face repos are gated.
+Point the build at your own mirror:
+
+```bash
+flutter build appbundle --release --target-platform android-arm64 \
+  --dart-define=SAATH_MODEL_BASE_URL=https://models.example.in
+```
+
+Without it the download button is disabled and the screen says why.
 
 The safety guardrail (`features/counsellor/safety.dart`) is deliberately *not*
-part of the model. It runs on every text the user writes — chat, Untangle vents,
-both Repair Room sides — before any generation, and the model gets no vote.
+part of the model. It runs on every text the user writes — chat, Untangle
+vents, both Repair Room sides, a message being rewritten — before any
+generation, and the model gets no vote.
 
 ## Strings
 
@@ -82,8 +105,9 @@ fails if any `_t()` pair is empty, identical, or missing Devanagari.
 
 ## Dev shortcuts
 
-- `flutter run --route=/safety` (or `/learn`, `/settings`, `/journal`) opens
-  straight onto a screen. go_router honours the platform's initial route.
+- `flutter run --route=/safety` (or `/learn`, `/settings`, `/journal`,
+  `/week`, `/settings/model`) opens straight onto a screen. go_router honours
+  the platform's initial route.
 - Settings → *Delete everything* resets to onboarding (with a confirmation).
 - Repair Room's merged view has a "Skip to closing" link **in debug builds
   only**.

@@ -52,6 +52,7 @@ class JournalEntry {
     required this.body,
     this.ask = '',
     this.themes = const [],
+    this.reflection = '',
   });
 
   final String id;
@@ -69,6 +70,10 @@ class JournalEntry {
 
   final List<JournalTheme> themes;
 
+  /// The counsellor's note on reading this back, generated on request rather
+  /// than at save time — the value is in the distance.
+  final String reflection;
+
   Map<String, Object?> toJson() => {
         'id': id,
         'createdAt': createdAt.toIso8601String(),
@@ -77,6 +82,7 @@ class JournalEntry {
         'body': body,
         'ask': ask,
         'themes': [for (final t in themes) t.id],
+        if (reflection.isNotEmpty) 'reflection': reflection,
       };
 
   static JournalEntry? fromJson(Object? raw) {
@@ -95,6 +101,7 @@ class JournalEntry {
         for (final t in (raw['themes'] as List? ?? const []))
           if (JournalTheme.fromId(t as String?) case final theme?) theme,
       ],
+      reflection: raw['reflection'] as String? ?? '',
     );
   }
 }
@@ -150,6 +157,48 @@ class JournalStore extends StateNotifier<List<JournalEntry>> {
     state = List.unmodifiable([entry, ...state].take(_maxEntries));
     await _persist();
     return entry;
+  }
+
+  /// Replaces the themes on an entry, so the 30-day trends reflect what the
+  /// user thinks it was about rather than only what a keyword pass guessed.
+  Future<void> setThemes(String id, List<JournalTheme> themes) async {
+    state = List.unmodifiable([
+      for (final e in state)
+        if (e.id == id)
+          JournalEntry(
+            id: e.id,
+            createdAt: e.createdAt,
+            kind: e.kind,
+            title: e.title,
+            body: e.body,
+            ask: e.ask,
+            themes: themes,
+            reflection: e.reflection,
+          )
+        else
+          e,
+    ]);
+    await _persist();
+  }
+
+  Future<void> setReflection(String id, String reflection) async {
+    state = List.unmodifiable([
+      for (final e in state)
+        if (e.id == id)
+          JournalEntry(
+            id: e.id,
+            createdAt: e.createdAt,
+            kind: e.kind,
+            title: e.title,
+            body: e.body,
+            ask: e.ask,
+            themes: e.themes,
+            reflection: reflection.trim(),
+          )
+        else
+          e,
+    ]);
+    await _persist();
   }
 
   Future<void> remove(String id) async {

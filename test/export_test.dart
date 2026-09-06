@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:saath_hamesha/core/app_state.dart';
+import 'package:saath_hamesha/core/couple_space.dart';
 import 'package:saath_hamesha/core/journal.dart';
 import 'package:saath_hamesha/features/settings/export.dart';
 
@@ -28,8 +29,31 @@ void main() {
       ),
     ];
 
-    final decoded = jsonDecode(buildExportJson(app: app, journal: journal))
-        as Map<String, Object?>;
+    final couple = CoupleSpace(
+      loveMap: [
+        LoveMapFact(
+          id: 'f1',
+          prompt: 'What worries them?',
+          answer: 'his mother',
+          updatedAt: DateTime(2026, 9, 1),
+        ),
+      ],
+      goals: [
+        SharedGoal(
+          id: 'g1',
+          text: 'walk after dinner',
+          createdAt: DateTime(2026, 9, 1),
+        ),
+      ],
+      dates: const [
+        ImportantDate(
+            id: 'd1', label: 'Married', month: 12, day: 2, year: 2018),
+      ],
+    );
+
+    final decoded =
+        jsonDecode(buildExportJson(app: app, journal: journal, couple: couple))
+            as Map<String, Object?>;
 
     expect(decoded['app'], 'Saath');
     expect(decoded['version'], isNotEmpty);
@@ -44,10 +68,23 @@ void main() {
     expect((profile['pulses']! as List).single,
         {'day': '2026-09-01', 'connection': 4, 'word': 'warm'});
 
+    final us = decoded['us']! as Map<String, Object?>;
+    expect((us['goals']! as List).single,
+        containsPair('text', 'walk after dinner'));
+    expect(
+        (us['loveMap']! as List).single, containsPair('answer', 'his mother'));
+
     final entries = decoded['journal']! as List;
     expect(entries, hasLength(1));
     expect((entries.single as Map)['ask'], 'can we pick a time?');
     expect((entries.single as Map)['themes'], ['time']);
+  });
+
+  test('the Us page is in the export too — "everything" has to mean it', () {
+    final decoded =
+        jsonDecode(buildExportJson(app: const AppState(), journal: const []))
+            as Map<String, Object?>;
+    expect(decoded['us'], isA<Map<String, Object?>>());
   });
 
   test('an empty install still produces valid, readable JSON', () {

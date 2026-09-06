@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_info.dart';
 import '../../core/app_state.dart';
+import '../../core/couple_space.dart';
 import '../../core/journal.dart';
 import '../../core/strings.dart';
 import '../../theme/tokens.dart';
@@ -16,8 +17,11 @@ import 'settings_screen.dart' show copyToClipboard;
 /// This is deliberately *everything* Saath holds, in one readable object: if
 /// the privacy claim is real, the export has to be small enough to read and
 /// complete enough to be the whole story.
-String buildExportJson(
-    {required AppState app, required List<JournalEntry> journal}) {
+String buildExportJson({
+  required AppState app,
+  required List<JournalEntry> journal,
+  CoupleSpace couple = const CoupleSpace(),
+}) {
   final payload = <String, Object?>{
     'app': 'Saath',
     'version': AppInfo.displayVersion,
@@ -26,6 +30,7 @@ String buildExportJson(
         'This is the complete contents of Saath on this device. Nothing is stored anywhere else.',
     'profile': app.toJson(),
     'journal': [for (final e in journal) e.toJson()],
+    'us': couple.toJson(),
   };
   return const JsonEncoder.withIndent('  ').convert(payload);
 }
@@ -35,6 +40,7 @@ Future<void> showExportSheet(BuildContext context, WidgetRef ref) {
   final json = buildExportJson(
     app: ref.read(appStateProvider),
     journal: ref.read(journalProvider),
+    couple: ref.read(coupleSpaceProvider),
   );
   final surface = context.surface;
 

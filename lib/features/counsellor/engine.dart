@@ -174,6 +174,18 @@ abstract class CounsellorEngine {
   /// the user still chooses, including choosing their original words.
   Future<KinderRewrite> sayItKinder(String draft, CounsellorContext ctx);
 
+  /// One short paragraph on a saved journal entry, read back later.
+  ///
+  /// Deliberately not generated at save time: the value is in what an entry
+  /// looks like from a week's distance, not in another opinion in the moment.
+  Future<String> reflectOnEntry({
+    required String title,
+    required String body,
+    required String ask,
+    required DateTime savedAt,
+    required CounsellorContext ctx,
+  });
+
   /// Turns a week of check-ins into two short paragraphs. Generated on the
   /// device, from data that never left it.
   Future<WeeklyReflection> weeklyReflection({
@@ -333,6 +345,29 @@ class MockCounsellorEngine implements CounsellorEngine {
       keep:
           'The need underneath this is fair, and $p should hear it. Only the edge is worth losing.',
     );
+  }
+
+  @override
+  Future<String> reflectOnEntry({
+    required String title,
+    required String body,
+    required String ask,
+    required DateTime savedAt,
+    required CounsellorContext ctx,
+  }) async {
+    if (body.trim().isEmpty) {
+      throw const CounsellorException('nothing to reflect on');
+    }
+    await Future<void>.delayed(tokenDelay * 18);
+    final days = DateTime.now().difference(savedAt).inDays;
+    if (ctx.hindi) {
+      return days >= 7
+          ? 'एक हफ़्ता पहले यह बहुत बड़ा लग रहा था। अब पढ़िए — जो ज़रूरत आपने लिखी थी, वह अब भी वही है। सवाल यह है कि क्या आपने उसे कहा।'
+          : 'आपने जो ज़रूरत लिखी, वह साफ़ है। अब भी वही एक वाक्य बाक़ी है — कहा या नहीं?';
+    }
+    return days >= 7
+        ? 'A week ago this felt enormous. Reading it back, the need you wrote down is still the same one. The question is whether you ever said it out loud.'
+        : 'The need in this is clear on the page. The one sentence is still sitting there — did it get said?';
   }
 
   @override

@@ -188,6 +188,41 @@ Reply with JSON only. No prose before or after, no markdown fence:
 ''';
   }
 
+  /// A saved journal entry, read back later.
+  static String reflectOnEntry({
+    required String title,
+    required String body,
+    required String ask,
+    required int daysAgo,
+    required CounsellorContext ctx,
+  }) {
+    final language = ctx.hindi
+        ? 'Write in natural Hindi (Devanagari).'
+        : 'Write in plain English.';
+
+    return '''
+${persona(ctx)}
+
+They saved this $daysAgo days ago and are reading it back now.
+
+"""
+${body.trim()}
+"""
+
+The sentence they meant to say was: "${ask.trim()}"
+
+Write one short paragraph, under 60 words. What does this look like from
+here? Do not re-solve it, do not congratulate them for journalling, and do
+not assume it went well or badly — you do not know. If the need they wrote is
+still unspoken, say so plainly.
+
+$language
+
+Reply with JSON only. No prose before or after, no markdown fence:
+{"reflection":""}
+''';
+  }
+
   /// Weekly Pulse: seven days of check-ins in, a short reflection out.
   static String weeklyReflection({
     required List<int> scores,

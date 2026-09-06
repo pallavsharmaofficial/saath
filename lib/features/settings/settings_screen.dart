@@ -8,6 +8,7 @@ import '../../app/router.dart';
 import '../../core/app_info.dart';
 import '../../core/app_lock.dart';
 import '../../core/app_state.dart';
+import '../../core/couple_space.dart';
 import '../../core/helplines.dart';
 import '../../core/journal.dart';
 import '../../core/strings.dart';
@@ -322,6 +323,7 @@ class SettingsScreen extends ConsumerWidget {
     if (confirmed != true) return;
 
     await ref.read(journalProvider.notifier).clear();
+    await ref.read(coupleSpaceProvider.notifier).clear();
     ref.read(chatControllerProvider.notifier).clear();
     await ref.read(appLockProvider.notifier).reset();
     await ref.read(appStateProvider.notifier).reset();

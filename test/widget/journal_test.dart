@@ -56,6 +56,51 @@ void main() {
     expect(find.textContaining('Nothing saved yet'), findsOneWidget);
   });
 
+  testWidgets('themes can be corrected by the person who lived it',
+      (tester) async {
+    usePhoneSurface(tester);
+    final app = await pumpApp(tester, seed: onboardedSeed());
+    await app.container.read(journalProvider.notifier).add(
+      kind: JournalKind.untangle,
+      title: 'the dishes',
+      body: 'b',
+      // What the keyword pass guessed.
+      themes: [JournalTheme.time],
+    );
+
+    app.push('/journal');
+    await tester.pumpAndSettle();
+
+    await tapVisible(tester, find.text('Trust'));
+
+    final themes = app.container.read(journalProvider).single.themes;
+    expect(themes, containsAll([JournalTheme.time, JournalTheme.trust]));
+    expect(JournalStore.load(app.store).single.themes, hasLength(2));
+  });
+
+  testWidgets('a reflection is generated on request and kept', (tester) async {
+    usePhoneSurface(tester);
+    final app = await pumpApp(tester, seed: onboardedSeed());
+    await app.container.read(journalProvider.notifier).add(
+          kind: JournalKind.untangle,
+          title: 'the dishes',
+          body: 'What I need: to know it matters',
+          ask: 'Can we pick a time tonight?',
+          at: DateTime.now().subtract(const Duration(days: 9)),
+        );
+
+    app.push('/journal');
+    await tester.pumpAndSettle();
+
+    // Not generated at save time: the value is in the distance.
+    await tapVisible(tester, find.text('What does this look like now?'));
+
+    final entry = app.container.read(journalProvider).single;
+    expect(entry.reflection, isNotEmpty);
+    expect(entry.reflection, contains('A week ago'));
+    expect(JournalStore.load(app.store).single.reflection, isNotEmpty);
+  });
+
   testWidgets('reachable from Today once something is saved', (tester) async {
     usePhoneSurface(tester);
     final app = await pumpApp(tester, seed: onboardedSeed());
