@@ -10,6 +10,8 @@ import '../../theme/tokens.dart';
 import '../../ui/atmosphere.dart';
 import '../../ui/glass.dart';
 import 'chat_controller.dart';
+import 'say_it_kinder_sheet.dart';
+import 'voice/voice_service.dart';
 import 'engine.dart';
 
 class CounsellorScreen extends ConsumerStatefulWidget {
@@ -163,6 +165,11 @@ class _CounsellorScreenState extends ConsumerState<CounsellorScreen> {
                               label: s.helpMeSaySorry,
                               onTap: () => _send(s.helpMeSaySorry),
                             ),
+                            GlassChip(
+                              label: s.sayItKinder,
+                              icon: Icons.edit_note_rounded,
+                              onTap: () => showSayItKinderSheet(context),
+                            ),
                           ],
                         ),
                       ),
@@ -212,7 +219,7 @@ class _ChatMenu extends ConsumerWidget {
   }
 }
 
-class _Composer extends StatefulWidget {
+class _Composer extends ConsumerStatefulWidget {
   const _Composer({
     required this.s,
     required this.controller,
@@ -232,10 +239,10 @@ class _Composer extends StatefulWidget {
   final VoidCallback onStop;
 
   @override
-  State<_Composer> createState() => _ComposerState();
+  ConsumerState<_Composer> createState() => _ComposerState();
 }
 
-class _ComposerState extends State<_Composer> {
+class _ComposerState extends ConsumerState<_Composer> {
   @override
   void initState() {
     super.initState();
@@ -250,10 +257,40 @@ class _ComposerState extends State<_Composer> {
 
   void _onChanged() => setState(() {});
 
+  Future<void> _toggleMic() async {
+    final voice = ref.read(voiceInputProvider.notifier);
+    if (ref.read(voiceInputProvider).isListening) {
+      await voice.stop();
+      return;
+    }
+    await voice.start(seed: widget.controller.text);
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = widget.s;
     final hasText = widget.controller.text.trim().isNotEmpty;
+    final voice = ref.watch(voiceInputProvider);
+
+    // Speech fills the field as it is heard, so the person can see they were
+    // understood before they send it.
+    ref.listen(voiceInputProvider.select((v) => v.transcript), (_, next) {
+      if (next.isEmpty) return;
+      widget.controller.value = TextEditingValue(
+        text: next,
+        selection: TextSelection.collapsed(offset: next.length),
+      );
+    });
+
+    ref.listen(voiceInputProvider.select((v) => v.status), (prev, next) {
+      if (!context.mounted) return;
+      if (next == VoiceStatus.unavailable) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(s.voiceUnavailable)));
+        ref.read(voiceInputProvider.notifier).reset();
+      }
+    });
 
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 12, 16, widget.bottomInset),
@@ -289,16 +326,30 @@ class _ComposerState extends State<_Composer> {
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          // Was called `_MicButton`, drew a send arrow, and sent the field —
-          // three different stories for one control. It is a send button.
+          const SizedBox(width: 8),
+          // A real microphone, next to a real send button. These used to be
+          // one control that drew a send arrow and was called `_MicButton`.
+          if (!widget.streaming)
+            _RoundButton(
+              icon: voice.isListening
+                  ? Icons.stop_rounded
+                  : Icons.mic_none_rounded,
+              label: voice.isListening ? s.voiceStop : s.voiceStart,
+              enabled: true,
+              filled: voice.isListening,
+              onTap: _toggleMic,
+            ),
+          if (!widget.streaming) const SizedBox(width: 8),
           _RoundButton(
             icon: widget.streaming ? Icons.stop_rounded : Icons.send_rounded,
             label: widget.streaming ? s.stopGenerating : s.sendMessage,
             enabled: widget.streaming || hasText,
             onTap: widget.streaming
                 ? widget.onStop
-                : () => widget.onSend(widget.controller.text),
+                : () {
+                    ref.read(voiceInputProvider.notifier).cancel();
+                    widget.onSend(widget.controller.text);
+                  },
           ),
         ],
       ),
@@ -312,12 +363,17 @@ class _RoundButton extends StatelessWidget {
     required this.label,
     required this.enabled,
     required this.onTap,
+    this.filled = true,
   });
 
   final IconData icon;
   final String label;
   final bool enabled;
   final VoidCallback onTap;
+
+  /// False for the idle microphone, so the send button stays the one obvious
+  /// primary action.
+  final bool filled;
 
   @override
   Widget build(BuildContext context) {
@@ -328,7 +384,9 @@ class _RoundButton extends StatelessWidget {
       label: label,
       excludeSemantics: true,
       child: Material(
-        color: st.accent.withValues(alpha: enabled ? 0.85 : 0.3),
+        color: st.accent.withValues(
+          alpha: !enabled ? 0.3 : (filled ? 0.85 : 0.18),
+        ),
         shape: CircleBorder(
           side: BorderSide(
               color: Colors.white.withValues(alpha: enabled ? 0.45 : 0.2)),
@@ -339,7 +397,11 @@ class _RoundButton extends StatelessWidget {
           child: SizedBox(
             width: 50,
             height: 50,
-            child: Icon(icon, color: Colors.white, size: 22),
+            child: Icon(
+              icon,
+              color: filled ? Colors.white : st.accent,
+              size: 22,
+            ),
           ),
         ),
       ),
@@ -381,18 +443,19 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _AiBubble extends StatelessWidget {
+class _AiBubble extends ConsumerWidget {
   const _AiBubble(this.m, {required this.s});
 
   final ChatMessage m;
   final S s;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final st = context.stage;
     final surface = context.surface;
     final body =
         m.failed && m.text.trim().isEmpty ? s.counsellorFailed : m.text;
+    final speaking = ref.watch(readAloudProvider);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,14 +472,31 @@ class _AiBubble extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(
-            body.isEmpty ? s.thinking : body,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: m.failed ? surface.ink2 : null,
-              // The reply sits directly on the photo; a soft ground-colour
-              // halo is what keeps it legible over a light patch.
-              shadows: [Shadow(color: surface.bg, blurRadius: 12)],
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                body.isEmpty ? s.thinking : body,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: m.failed ? surface.ink2 : null,
+                  // The reply sits directly on the photo; a soft ground-colour
+                  // halo is what keeps it legible over a light patch.
+                  shadows: [Shadow(color: surface.bg, blurRadius: 12)],
+                ),
+              ),
+              // For the times someone cannot look at the screen — driving home
+              // after the argument, or crying.
+              if (body.trim().length > 40 && !m.failed) ...[
+                const SizedBox(height: 8),
+                GlassChip(
+                  label: speaking ? s.readAloudStop : s.readAloud,
+                  icon:
+                      speaking ? Icons.stop_rounded : Icons.volume_up_outlined,
+                  active: speaking,
+                  onTap: () => ref.read(readAloudProvider.notifier).speak(body),
+                ),
+              ],
+            ],
           ),
         ),
       ],

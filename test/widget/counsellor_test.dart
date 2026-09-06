@@ -19,9 +19,17 @@ void main() {
     await tester.tap(find.byIcon(Icons.send_rounded));
     await tester.pumpAndSettle();
 
-    expect(find.text('we keep having the same fight'), findsOneWidget);
     expect(app.container.read(chatControllerProvider).messages, hasLength(2));
     expect(tester.takeException(), isNull);
+
+    // The reply scrolls the conversation, so the user's own message may be
+    // above the fold — a ListView does not keep what it cannot see.
+    await tester.scrollUntilVisible(
+      find.text('we keep having the same fight'),
+      -240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('we keep having the same fight'), findsOneWidget);
   });
 
   testWidgets('the send button is disabled until something is typed',

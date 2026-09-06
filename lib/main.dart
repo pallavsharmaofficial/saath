@@ -3,11 +3,15 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_gemma/flutter_gemma.dart';
+import 'package:flutter_gemma_litertlm/flutter_gemma_litertlm.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
 import 'core/app_state.dart';
 import 'core/key_value_store.dart';
+import 'features/counsellor/model/model_catalogue.dart';
+import 'features/counsellor/model/model_manager.dart';
 
 /// Makes the bundled typefaces show up in Settings → About → Licences.
 ///
@@ -64,9 +68,42 @@ Future<void> main() async {
             'Saath: running with in-memory settings; nothing will persist.');
       }
 
+      // Registering the inference engine does not load a model and does not
+      // touch the network — it only tells flutter_gemma what a .litertlm file
+      // is. A phone with no model downloaded starts exactly as fast as before.
+      try {
+        await FlutterGemma.initialize(
+          inferenceEngines: const [LiteRtLmEngine()],
+          huggingFaceToken: ModelHosting.huggingFaceToken.isEmpty
+              ? null
+              : ModelHosting.huggingFaceToken,
+        );
+        FlutterGemma.logLevel =
+            kReleaseMode ? GemmaLogLevel.none : GemmaLogLevel.info;
+      } on Object catch (error, stack) {
+        // A runtime that will not initialise means the preview engine, not a
+        // failed launch.
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stack,
+            library: 'saath',
+            context: ErrorDescription('initialising the on-device runtime'),
+          ),
+        );
+      }
+
+      final container = ProviderContainer(
+        overrides: [keyValueStoreProvider.overrideWithValue(store)],
+      );
+      // Reconciles what we think is installed with what is actually on disk,
+      // and reads physical RAM to pick the default model. Deliberately not
+      // awaited: the first screen must not wait on it.
+      unawaited(container.read(modelManagerProvider.notifier).initialise());
+
       runApp(
-        ProviderScope(
-          overrides: [keyValueStoreProvider.overrideWithValue(store)],
+        UncontrolledProviderScope(
+          container: container,
           child: const SaathApp(),
         ),
       );

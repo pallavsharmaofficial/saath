@@ -19,9 +19,27 @@ dependencies:
   go_router: ^14.2.0
   shared_preferences: ^2.3.2
   intl: ^0.20.2
-  # Dials the helplines on the safety screen. This is the only plugin that
-  # reaches outside the app, and only when the user taps a helpline.
+  # Dials the helplines on the safety screen. Only reaches outside the app
+  # when the user taps a helpline.
   url_launcher: ^6.3.0
+
+  # The on-device counsellor. LiteRT-LM engine, per the launch plan.
+  # flutter_gemma downloads the model once, on the user's say-so, and every
+  # token after that is generated on the phone.
+  flutter_gemma: ^1.7.2
+  flutter_gemma_litertlm: ^1.6.2
+
+  # Chooses the default model from physical RAM: Gemma 3n E2B on 6 GB+, the
+  # 1B fallback below that. Guessing wrong here means an OOM on a ₹12,000
+  # phone, which is most of the market we are aiming at.
+  device_info_plus: ^13.0.0
+
+  # Voice in and read-aloud, both on-device.
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
+
+  # Biometric app lock.
+  local_auth: ^3.0.0
 
 dev_dependencies:
   flutter_test:

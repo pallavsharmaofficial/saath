@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/journal.dart';
+import 'model/gemma_engine.dart';
+import 'model/model_manager.dart';
 import 'safety.dart';
 
 /// One message in a counsellor conversation.
@@ -88,6 +90,39 @@ class RepairMerge {
   final String firstTurn;
 }
 
+/// Three rewrites of a message the user is about to send, plus what was worth
+/// keeping from their original.
+@immutable
+class KinderRewrite {
+  const KinderRewrite({
+    required this.kinder,
+    required this.clearer,
+    required this.shorter,
+    required this.keep,
+  });
+
+  final String kinder;
+  final String clearer;
+  final String shorter;
+  final String keep;
+
+  /// The three options, labelled, for a picker.
+  List<(String, String)> options(bool hindi) => [
+        (hindi ? 'नरम' : 'Kinder', kinder),
+        (hindi ? 'साफ़' : 'Clearer', clearer),
+        (hindi ? 'छोटा' : 'Shorter', shorter),
+      ].where((o) => o.$2.trim().isNotEmpty).toList();
+}
+
+/// The on-device reflection on a week of check-ins.
+@immutable
+class WeeklyReflection {
+  const WeeklyReflection({required this.reflection, required this.suggestion});
+
+  final String reflection;
+  final String suggestion;
+}
+
 /// Context the engine gets on every call. The origin story is what keeps
 /// advice anchored to why the couple started.
 @immutable
@@ -134,6 +169,19 @@ abstract class CounsellorEngine {
   Future<Untangled> untangle(String vent, CounsellorContext ctx);
 
   Future<RepairMerge> mergeRepair(RepairSides sides, CounsellorContext ctx);
+
+  /// Rewrites a message the user is about to send. Never sends anything —
+  /// the user still chooses, including choosing their original words.
+  Future<KinderRewrite> sayItKinder(String draft, CounsellorContext ctx);
+
+  /// Turns a week of check-ins into two short paragraphs. Generated on the
+  /// device, from data that never left it.
+  Future<WeeklyReflection> weeklyReflection({
+    required List<int> scores,
+    required List<String> words,
+    required int untangles,
+    required CounsellorContext ctx,
+  });
 
   /// True when the input suggests coercion, abuse or self-harm and the safety
   /// interrupt should show instead of a normal reply.
@@ -258,6 +306,66 @@ class MockCounsellorEngine implements CounsellorEngine {
     );
   }
 
+  @override
+  Future<KinderRewrite> sayItKinder(String draft, CounsellorContext ctx) async {
+    if (draft.trim().isEmpty) {
+      throw const CounsellorException('nothing to rewrite');
+    }
+    await Future<void>.delayed(tokenDelay * 18);
+    final p = ctx.partnerOrDefault;
+    if (ctx.hindi) {
+      return const KinderRewrite(
+        kinder:
+            'मुझे बुरा लगा जब यह हुआ। मैं समझना चाहता हूँ कि तुम्हारी तरफ़ से क्या था।',
+        clearer:
+            'जब ऐसा होता है तो मुझे अनदेखा महसूस होता है। क्या हम आज रात दस मिनट बात कर सकते हैं?',
+        shorter: 'मुझे तुम्हारी ज़रूरत है — आज रात दस मिनट?',
+        keep:
+            'आपकी बात में जो ज़रूरत है, वह जायज़ है। बस उसे सुनने लायक़ बनाइए।',
+      );
+    }
+    return KinderRewrite(
+      kinder:
+          'That landed badly with me, and I would rather tell you than sit on it. What was it like from your side?',
+      clearer:
+          'When that happens I feel unnoticed. Can we take ten minutes tonight?',
+      shorter: 'I need ten minutes with you tonight. Can we?',
+      keep:
+          'The need underneath this is fair, and $p should hear it. Only the edge is worth losing.',
+    );
+  }
+
+  @override
+  Future<WeeklyReflection> weeklyReflection({
+    required List<int> scores,
+    required List<String> words,
+    required int untangles,
+    required CounsellorContext ctx,
+  }) async {
+    if (scores.isEmpty) {
+      throw const CounsellorException('no check-ins this week');
+    }
+    await Future<void>.delayed(tokenDelay * 22);
+    final average = scores.reduce((a, b) => a + b) / scores.length;
+    final rising = scores.length > 1 && scores.last > scores.first;
+
+    if (ctx.hindi) {
+      return WeeklyReflection(
+        reflection: rising
+            ? 'हफ़्ते की शुरुआत दूरी से हुई और अंत क़रीब आते हुए। यह अपने आप नहीं हुआ — आप दोनों ने कुछ किया।'
+            : 'यह हफ़्ता ज़्यादातर एक जैसा रहा, औसत ${average.toStringAsFixed(1)} पर। न गिरावट, न उछाल — बस एक सादा हफ़्ता।',
+        suggestion:
+            'इस हफ़्ते एक छोटी चीज़: दिन में एक बार दस मिनट, बिना फ़ोन के।',
+      );
+    }
+    return WeeklyReflection(
+      reflection: rising
+          ? 'The week started further apart than it ended. That did not happen on its own — one of you reached, and the other turned toward it.'
+          : 'Mostly a level week, averaging ${average.toStringAsFixed(1)}. No slide, no leap. A plain week is not a failed one.',
+      suggestion: 'One small thing this week: ten minutes a day, phones down.',
+    );
+  }
+
   /// Cheap keyword pass so saved entries carry themes for the 30-day trend.
   /// The Gemma engine returns these in its JSON instead.
   @visibleForTesting
@@ -303,7 +411,20 @@ class MockCounsellorEngine implements CounsellorEngine {
   }
 }
 
-/// Swap this provider's value for the Gemma engine once the model spike is
-/// done: `counsellorEngineProvider.overrideWithValue(GemmaCounsellorEngine())`.
-final counsellorEngineProvider =
-    Provider<CounsellorEngine>((_) => const MockCounsellorEngine());
+/// Whichever engine can actually answer right now.
+///
+/// Gemma when a model is installed, the scripted preview engine otherwise.
+/// The app is fully usable in both states — that is deliberate: onboarding,
+/// Learn and the safety screen all have to work before a 3.7 GB download
+/// finishes, and on a phone where it never will.
+///
+/// Tests override this provider, so nothing here reaches the native runtime
+/// under `flutter test`.
+final counsellorEngineProvider = Provider<CounsellorEngine>((ref) {
+  final installed = ref.watch(modelManagerProvider.select((s) => s.installed));
+  if (installed == null) return const MockCounsellorEngine();
+
+  final engine = GemmaCounsellorEngine(installed);
+  ref.onDispose(engine.dispose);
+  return engine;
+});

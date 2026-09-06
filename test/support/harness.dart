@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_gemma/flutter_gemma.dart' show CancelToken;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:saath_hamesha/app/router.dart';
 import 'package:saath_hamesha/core/app_state.dart';
 import 'package:saath_hamesha/core/key_value_store.dart';
 import 'package:saath_hamesha/features/counsellor/engine.dart';
+import 'package:saath_hamesha/features/counsellor/model/model_catalogue.dart';
+import 'package:saath_hamesha/features/counsellor/model/model_manager.dart';
 import 'package:saath_hamesha/theme/theme.dart';
 
 /// Engine with no artificial latency, so a widget test does not spend four
@@ -15,17 +20,25 @@ const instantEngine = MockCounsellorEngine(tokenDelay: Duration.zero);
 /// Boots the real app — real router, real redirect, real providers — on top of
 /// an in-memory store. Widget tests exercise the same navigation the user does.
 class TestApp {
-  TestApp({Map<String, Object>? seed, CounsellorEngine engine = instantEngine})
-      : store = InMemoryStore(seed) {
+  TestApp({
+    Map<String, Object>? seed,
+    CounsellorEngine engine = instantEngine,
+    ModelRuntime? runtime,
+  })  : store = InMemoryStore(seed),
+        runtime = runtime ?? FakeModelRuntime() {
     container = ProviderContainer(
       overrides: [
         keyValueStoreProvider.overrideWithValue(store),
         counsellorEngineProvider.overrideWithValue(engine),
+        // Nothing in a test may reach the native inference engine or start a
+        // multi-gigabyte download.
+        modelRuntimeProvider.overrideWithValue(this.runtime),
       ],
     );
   }
 
   final InMemoryStore store;
+  final ModelRuntime runtime;
   late final ProviderContainer container;
 
   Widget widget() {
@@ -91,8 +104,9 @@ Future<TestApp> pumpApp(
   WidgetTester tester, {
   Map<String, Object>? seed,
   CounsellorEngine engine = instantEngine,
+  ModelRuntime? runtime,
 }) async {
-  final app = TestApp(seed: seed, engine: engine);
+  final app = TestApp(seed: seed, engine: engine, runtime: runtime);
   addTearDown(app.dispose);
   await tester.pumpWidget(app.widget());
   await tester.pumpAndSettle();
@@ -132,4 +146,46 @@ Future<void> tapVisible(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
   await tester.tap(finder);
   await tester.pumpAndSettle();
+}
+
+/// A model runtime that installs instantly and remembers what it holds.
+class FakeModelRuntime implements ModelRuntime {
+  FakeModelRuntime({this.failWith, this.progressSteps = const [0, 50, 100]});
+
+  /// Thrown from [install] when set, to exercise the failure path.
+  final Object? failWith;
+  final List<int> progressSteps;
+
+  final Set<String> installed = {};
+  final List<SaathModel> installCalls = [];
+  final List<String> uninstallCalls = [];
+
+  /// Completes when the test allows the install to finish, so a widget test
+  /// can observe the in-progress state.
+  Completer<void>? gate;
+
+  @override
+  Future<bool> isInstalled(String fileName) async =>
+      installed.contains(fileName);
+
+  @override
+  Future<void> install({
+    required SaathModel model,
+    required CancelToken cancelToken,
+    required void Function(int percent) onProgress,
+  }) async {
+    installCalls.add(model);
+    for (final p in progressSteps) {
+      onProgress(p);
+    }
+    if (gate != null) await gate!.future;
+    if (failWith != null) throw failWith!;
+    installed.add(model.fileName);
+  }
+
+  @override
+  Future<void> uninstall(String fileName) async {
+    uninstallCalls.add(fileName);
+    installed.remove(fileName);
+  }
 }

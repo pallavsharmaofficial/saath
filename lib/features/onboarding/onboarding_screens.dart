@@ -10,9 +10,8 @@ import '../../theme/tokens.dart';
 import '../../ui/atmosphere.dart';
 import '../../ui/glass.dart';
 
-/// Total onboarding steps. The screens used to say "Step 2 of 4" and "Step 3
-/// of 4" and then finish — the count was simply wrong.
-const _totalSteps = 3;
+/// Total onboarding steps: welcome, names, origin story, model download.
+const _totalSteps = 4;
 
 /// Step 1 — welcome + language.
 class WelcomeScreen extends ConsumerWidget {
@@ -283,10 +282,11 @@ class OriginStoryScreen extends ConsumerStatefulWidget {
 
 class _OriginStoryScreenState extends ConsumerState<OriginStoryScreen> {
   Future<void> _finish() async {
-    await ref.read(appStateProvider.notifier).completeOnboarding();
+    // Onboarding is not complete yet — the model download is step 4, and it
+    // is the one step the user is allowed to walk past.
     // `context` here is State.context, which is what `mounted` actually
     // guards — the build-method parameter is a different one.
-    if (mounted) context.go(Routes.today);
+    if (mounted) context.push(Routes.onboardingModel);
   }
 
   @override

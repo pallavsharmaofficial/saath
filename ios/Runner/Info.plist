@@ -36,6 +36,10 @@
 		<string>tel</string>
 		<string>sms</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>So you can say what happened instead of typing it. Recording only starts when you tap the microphone, and Saath never keeps the audio.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>To turn what you say into text. Saath asks iOS to do this on the device; if you would rather nothing left the phone at all, use the keyboard.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

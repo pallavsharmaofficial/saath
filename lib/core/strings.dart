@@ -103,6 +103,92 @@ class S {
       'Voice input arrives with the on-device model. Typing works today.',
       'बोलकर कहने की सुविधा ऑन-डिवाइस मॉडल के साथ आएगी। अभी टाइप करें।');
 
+  // ── The on-device model ───────────────────────────────────────────────────
+  String get modelTitle =>
+      _t('Bring the counsellor home', 'काउंसलर को घर ले आइए');
+  String get modelBody => _t(
+        'Saath’s counsellor is a model that runs on this phone. Download it once and it never needs the internet again — and nothing you say ever leaves the device.',
+        'साथ का काउंसलर एक मॉडल है जो इसी फ़ोन पर चलता है। एक बार डाउनलोड कीजिए, फिर कभी इंटरनेट की ज़रूरत नहीं — और आपकी कोई बात फ़ोन से बाहर नहीं जाती।',
+      );
+  String modelSize(String size) => _t('$size download', '$size डाउनलोड');
+  String get modelWifi => _t(
+        'Use Wi-Fi. This is a large file and it will not resume on its own if the connection drops.',
+        'वाई-फ़ाई पर कीजिए। फ़ाइल बड़ी है और कनेक्शन टूटने पर अपने आप दोबारा शुरू नहीं होगी।',
+      );
+  String get modelDownload => _t('Download', 'डाउनलोड करें');
+  String get modelDownloading => _t('Downloading…', 'डाउनलोड हो रहा है…');
+
+  /// Not routed through _t: a percentage reads the same in both.
+  String modelPercent(int percent) => '\$percent%';
+  String modelRemaining(String time) =>
+      _t('about $time left', 'लगभग $time बाक़ी');
+  String get modelCancel => _t('Cancel download', 'डाउनलोड रोकें');
+  String get modelLater => _t('Not now', 'अभी नहीं');
+  String get modelSkipNote => _t(
+        'You can start without it. Everything except the counsellor works today, and this is here in Settings whenever you want it.',
+        'आप इसके बिना भी शुरू कर सकते हैं। काउंसलर को छोड़कर बाक़ी सब आज भी चलता है, और यह सेटिंग्स में हमेशा मौजूद रहेगा।',
+      );
+  String get modelReady =>
+      _t('The counsellor is on your phone', 'काउंसलर आपके फ़ोन पर है');
+  String modelReadyBody(String name) => _t(
+        '$name is running here, offline. Nothing you say to it is sent anywhere.',
+        '$name यहीं चल रहा है, बिना इंटरनेट। आप जो कहेंगे वह कहीं नहीं भेजा जाएगा।',
+      );
+  String get modelRemove => _t('Remove the model', 'मॉडल हटाएँ');
+  String modelRemoveBody(String size) => _t(
+        'Frees $size. The counsellor goes back to its scripted preview until you download it again.',
+        '$size खाली होगा। जब तक आप दोबारा डाउनलोड न करें, काउंसलर अपने लिखे हुए प्रीव्यू पर लौट जाएगा।',
+      );
+  String get modelRemoveConfirm => _t('Remove it?', 'हटा दें?');
+  String get modelChoose => _t('Which model', 'कौन-सा मॉडल');
+  String get modelRecommended =>
+      _t('Recommended for this phone', 'इस फ़ोन के लिए सुझाया गया');
+  String modelRamNote(int gb) => _t(
+        'This phone has about $gb GB of RAM.',
+        'इस फ़ोन में लगभग $gb GB RAM है।',
+      );
+  String get modelBigName =>
+      _t('Better Hindi, needs 6 GB', 'बेहतर हिंदी, 6 GB चाहिए');
+  String get modelSmallName =>
+      _t('Lighter, works on 4 GB', 'हल्का, 4 GB पर चलता है');
+  String get modelNotConfigured => _t(
+        'This build has no download host configured, so the counsellor stays in preview. See docs/LAUNCH-READINESS.md.',
+        'इस बिल्ड में डाउनलोड होस्ट सेट नहीं है, इसलिए काउंसलर प्रीव्यू में ही रहेगा।',
+      );
+  String get modelFailed =>
+      _t('The download did not finish.', 'डाउनलोड पूरा नहीं हुआ।');
+
+  // ── Say it kinder ─────────────────────────────────────────────────────────
+  String get sayItKinder => _t('Say it kinder', 'नरमी से कहें');
+  String get sayItKinderTitle => _t('Before you send it', 'भेजने से पहले');
+  String get sayItKinderHint => _t(
+        'Paste what you are about to send. Saath will offer three ways to say the same thing — you still choose, including your own words.',
+        'जो भेजने वाले हैं वह यहाँ रखिए। साथ उसी बात को कहने के तीन तरीक़े देगा — चुनाव आपका ही रहेगा, अपने शब्दों समेत।',
+      );
+  String get sayItKinderAction => _t('Rewrite it', 'दोबारा लिखें');
+  String get sayItKinderWorking =>
+      _t('Finding softer words…', 'नरम शब्द ढूँढ रहा हूँ…');
+  String get sayItKinderKeep => _t('Worth keeping', 'यह रखने लायक़ है');
+  String get sayItKinderEmpty =>
+      _t('Write the message first.', 'पहले संदेश लिखिए।');
+
+  // ── Weekly pulse ──────────────────────────────────────────────────────────
+  String get weeklyPulse => _t('Your week', 'आपका हफ़्ता');
+  String get weeklyPulseSub => _t(
+        'Made on this phone, from check-ins that never left it.',
+        'इसी फ़ोन पर बना, उन चेक-इन से जो कभी बाहर नहीं गए।',
+      );
+  String get weeklyPulseEmpty => _t(
+        'Check in a few days this week and Saath will have something to show you.',
+        'इस हफ़्ते कुछ दिन चेक-इन कीजिए, फिर साथ आपको कुछ दिखा पाएगा।',
+      );
+  String get weeklyPulseWorking =>
+      _t('Reading your week…', 'आपका हफ़्ता पढ़ रहा हूँ…');
+  String weeklyAverage(String value) => _t('Average $value', 'औसत $value');
+  String get weeklyOneThing => _t('One thing this week', 'इस हफ़्ते एक चीज़');
+  String get weeklyWords => _t('Your words', 'आपके शब्द');
+  String get openWeeklyPulse => _t('See your week', 'अपना हफ़्ता देखें');
+
   // ── Today ─────────────────────────────────────────────────────────────────
   String greeting(String name) {
     final h = DateTime.now().hour;
@@ -161,6 +247,25 @@ class S {
   String get clearConversation =>
       _t('Clear this conversation', 'यह बातचीत मिटाएँ');
   String get conversationCleared => _t('Conversation cleared', 'बातचीत मिट गई');
+
+  // ── Voice ─────────────────────────────────────────────────────────────────
+  String get voiceStart => _t('Speak instead', 'बोलकर कहें');
+  String get voiceListening => _t('Listening…', 'सुन रहा हूँ…');
+  String get voiceStop => _t('Stop listening', 'सुनना बंद करें');
+  String get voiceUnavailable => _t(
+        'This phone has no speech recogniser Saath can use. The keyboard still works.',
+        'इस फ़ोन में ऐसा स्पीच रिकॉग्नाइज़र नहीं जिसे साथ इस्तेमाल कर सके। कीबोर्ड फिर भी चलेगा।',
+      );
+  String get voiceDenied => _t(
+        'Saath needs the microphone to hear you. You can turn it on in your phone’s settings.',
+        'सुनने के लिए साथ को माइक्रोफ़ोन चाहिए। इसे फ़ोन की सेटिंग्स में चालू कर सकते हैं।',
+      );
+  String get voicePrivacyNote => _t(
+        'Your phone does the listening, not Saath’s servers — there are none. Some phones still send audio to the OS maker to transcribe it. If that matters to you, type instead.',
+        'सुनने का काम आपका फ़ोन करता है, साथ के सर्वर नहीं — वे हैं ही नहीं। कुछ फ़ोन फिर भी ऑडियो अपने OS निर्माता को भेजते हैं। अगर यह चिंता की बात है, तो टाइप कीजिए।',
+      );
+  String get readAloud => _t('Read aloud', 'पढ़कर सुनाएँ');
+  String get readAloudStop => _t('Stop reading', 'पढ़ना रोकें');
 
   // ── Untangle ──────────────────────────────────────────────────────────────
   String get untangled => _t('Untangled', 'सुलझा हुआ');

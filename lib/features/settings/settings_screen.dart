@@ -16,6 +16,7 @@ import '../../ui/atmosphere.dart';
 import '../../ui/glass.dart';
 import '../counsellor/chat_controller.dart';
 import '../counsellor/engine.dart';
+import '../counsellor/model/model_manager.dart';
 import 'export.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -27,6 +28,7 @@ class SettingsScreen extends ConsumerWidget {
     final app = ref.watch(appStateProvider);
     final n = ref.read(appStateProvider.notifier);
     final engine = ref.watch(counsellorEngineProvider);
+    final model = ref.watch(modelManagerProvider);
     final t = Theme.of(context).textTheme;
     final surface = context.surface;
 
@@ -189,6 +191,17 @@ class SettingsScreen extends ConsumerWidget {
                                 : AppInfo.modelAttribution,
                             style: t.bodySmall
                                 ?.copyWith(fontSize: 15, color: surface.ink2),
+                          ),
+                          const SizedBox(height: 12),
+                          GlassButton(
+                            label: model.hasModel
+                                ? s.modelRemove
+                                : '${s.modelDownload} · ${model.recommended.sizeLabel}',
+                            primary: !model.hasModel,
+                            icon: model.hasModel
+                                ? Icons.check_circle_outline_rounded
+                                : Icons.download_rounded,
+                            onPressed: () => context.push(Routes.model),
                           ),
                           const SizedBox(height: 12),
                           // The bundled typefaces are SIL OFL, and the Gemma

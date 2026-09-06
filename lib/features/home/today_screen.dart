@@ -11,6 +11,7 @@ import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../ui/atmosphere.dart';
 import '../../ui/glass.dart';
+import '../counsellor/say_it_kinder_sheet.dart';
 
 class TodayScreen extends ConsumerWidget {
   const TodayScreen({super.key});
@@ -318,9 +319,11 @@ class _TalkCard extends StatelessWidget {
                     _DarkChip(s.promptSameFight,
                         onTap: () => context.push(Routes.talk,
                             extra: s.promptSameFight)),
+                    // Straight to the rewrite sheet rather than into a
+                    // conversation: someone with their thumb over Send has
+                    // seconds, not minutes.
                     _DarkChip(s.promptRegret,
-                        onTap: () =>
-                            context.push(Routes.talk, extra: s.promptRegret)),
+                        onTap: () => showSayItKinderSheet(context)),
                   ],
                 ),
               ],

@@ -42,8 +42,7 @@ void main() {
     await tester.tap(find.text('Start in English'));
     await tester.pumpAndSettle();
     expect(app.location, '/onboarding/names');
-    expect(find.text('Step 2 of 3'), findsOneWidget,
-        reason: 'the header used to claim "Step 2 of 4" for a 3-step flow');
+    expect(find.text('Step 2 of 4'), findsOneWidget);
 
     // Step 2 — Continue stays disabled until all three answers exist.
     GlassButton continueButton() => tester
@@ -63,7 +62,7 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(app.location, '/onboarding/origin');
-    expect(find.text('Step 3 of 3'), findsOneWidget);
+    expect(find.text('Step 3 of 4'), findsOneWidget);
     expect(find.textContaining('Vikram'), findsWidgets);
 
     // Step 3 — "Keep this" is gated on actually writing something.
@@ -77,6 +76,14 @@ void main() {
     expect(keepButton().onPressed, isNotNull);
 
     await tester.tap(find.text('Keep this'));
+    await tester.pumpAndSettle();
+
+    // Step 4 is the model download, and it is the one step a user may skip.
+    expect(app.location, '/onboarding/model');
+    expect(find.text('Step 4 of 4'), findsOneWidget);
+    expect(find.text('Bring the counsellor home'), findsOneWidget);
+
+    await tester.tap(find.text('Not now'));
     await tester.pumpAndSettle();
 
     // Completing onboarding used to rebuild the whole GoRouter mid-navigation.
@@ -107,6 +114,10 @@ void main() {
 
     await tester.tap(find.text('I’ll write this later'));
     await tester.pumpAndSettle();
+    expect(app.location, '/onboarding/model');
+
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
 
     expect(app.location, '/');
     expect(app.container.read(appStateProvider).onboarded, isTrue);
@@ -124,7 +135,7 @@ void main() {
     expect(app.container.read(appStateProvider).language, AppLanguage.hi);
     // These headings were hardcoded English before, so a Hindi user saw
     // "Step 2 of 4" and "Who are we talking about?".
-    expect(find.text('चरण 2 / 3'), findsOneWidget);
+    expect(find.text('चरण 2 / 4'), findsOneWidget);
     expect(find.text('बात किसके बारे में है?'), findsOneWidget);
     expect(find.text('शादीशुदा'), findsOneWidget);
   });

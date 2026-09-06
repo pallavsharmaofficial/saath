@@ -6,6 +6,7 @@ import '../core/app_state.dart';
 import '../core/strings.dart';
 import '../features/counsellor/counsellor_screen.dart';
 import '../features/counsellor/engine.dart';
+import '../features/counsellor/model/model_screen.dart';
 import '../features/couple/couple_space_screen.dart';
 import '../features/home/today_screen.dart';
 import '../features/journal/journal_screen.dart';
@@ -26,6 +27,7 @@ class Routes {
   static const onboarding = '/onboarding';
   static const onboardingNames = '/onboarding/names';
   static const onboardingOrigin = '/onboarding/origin';
+  static const onboardingModel = '/onboarding/model';
   static const today = '/';
   static const counsellor = '/counsellor';
   static const us = '/us';
@@ -38,6 +40,7 @@ class Routes {
   static const repairClose = '/repair/close';
   static const safety = '/safety';
   static const settings = '/settings';
+  static const model = '/settings/model';
   static const editOrigin = '/settings/origin';
   static const journal = '/journal';
 }
@@ -101,6 +104,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
               path: 'origin',
               pageBuilder: (c, s) => _fade(const OriginStoryScreen(), s)),
+          GoRoute(
+              path: 'model',
+              pageBuilder: (c, s) =>
+                  _fade(const ModelScreen(duringOnboarding: true), s)),
         ],
       ),
       StatefulShellRoute.indexedStack(
@@ -182,6 +189,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
               path: 'origin',
               pageBuilder: (c, s) => _fade(const EditOriginScreen(), s)),
+          GoRoute(
+              path: 'model',
+              pageBuilder: (c, s) => _fade(const ModelScreen(), s)),
         ],
       ),
       GoRoute(
