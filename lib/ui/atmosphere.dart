@@ -27,46 +27,87 @@ class Atmosphere extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.surface;
-    final veil = veilOpacity == null ? s.veil : s.bg.withOpacity(veilOpacity!);
+    final veil =
+        veilOpacity == null ? s.veil : s.bg.withValues(alpha: veilOpacity!);
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.asset(background, fit: BoxFit.cover),
-        ColoredBox(color: veil),
-        Align(
-          alignment: Alignment.topCenter,
-          child: IgnorePointer(
-            child: Container(
-              height: topFade,
+        // The photo layer is static for the life of the screen; isolating it
+        // keeps the blurred glass above from repainting it every frame.
+        RepaintBoundary(
+          child: Image.asset(
+            background,
+            fit: BoxFit.cover,
+            excludeFromSemantics: true,
+            filterQuality: FilterQuality.medium,
+            // A missing or truncated asset must not red-screen a counselling
+            // app mid-conversation. Fall back to the ground colour: every
+            // screen stays readable because the veil and fades do the work.
+            errorBuilder: (context, error, stack) => DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  stops: const [0, 0.45, 1],
-                  colors: [s.bg, s.bg.withOpacity(0.7), s.bg.withOpacity(0)],
+                  colors: [
+                    context.stage.accentSoft,
+                    s.bg,
+                  ],
                 ),
               ),
             ),
           ),
         ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: IgnorePointer(
-            child: Container(
-              height: bottomFade,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  stops: const [0, 0.45, 1],
-                  colors: [s.bg, s.bg.withOpacity(0.75), s.bg.withOpacity(0)],
-                ),
-              ),
-            ),
-          ),
-        ),
+        ColoredBox(color: veil),
+        _Fade(
+            height: topFade, from: Alignment.topCenter, color: s.bg, peak: 0.7),
+        _Fade(
+            height: bottomFade,
+            from: Alignment.bottomCenter,
+            color: s.bg,
+            peak: 0.75),
         child,
       ],
+    );
+  }
+}
+
+class _Fade extends StatelessWidget {
+  const _Fade({
+    required this.height,
+    required this.from,
+    required this.color,
+    required this.peak,
+  });
+
+  final double height;
+  final Alignment from;
+  final Color color;
+  final double peak;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: from,
+      child: IgnorePointer(
+        child: Container(
+          height: height,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: from,
+              end: from == Alignment.topCenter
+                  ? Alignment.bottomCenter
+                  : Alignment.topCenter,
+              stops: const [0, 0.45, 1],
+              colors: [
+                color,
+                color.withValues(alpha: peak),
+                color.withValues(alpha: 0),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -80,4 +121,6 @@ class Backgrounds {
   static const aware = 'assets/backgrounds/bg-aware.jpg';
   static const working = 'assets/backgrounds/bg-working.jpg';
   static const calm = 'assets/backgrounds/bg-calm.jpg';
+
+  static const all = [welcome, origin, today, aware, working, calm];
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/router.dart';
 import '../../core/app_state.dart';
 import '../../core/strings.dart';
 import '../../theme/theme.dart';
@@ -18,17 +19,22 @@ class CoupleSpaceScreen extends ConsumerWidget {
     final app = ref.watch(appStateProvider);
     final t = Theme.of(context).textTheme;
     final surface = context.surface;
-    final me = app.userName.isEmpty ? 'You' : app.userName;
+    final me = app.userOrDefault;
     final p = app.partnerOrDefault;
+
+    void notYet() => ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(s.needsPairing)));
 
     return StageTheme(
       stage: ResolutionStage.calm,
       child: Atmosphere(
         background: Backgrounds.calm,
         child: ListView(
-          padding: EdgeInsets.fromLTRB(24, MediaQuery.paddingOf(context).top + 12, 24, 140),
+          padding: EdgeInsets.fromLTRB(
+              24, MediaQuery.paddingOf(context).top + 12, 24, 140),
           children: [
-            Eyebrow('Us', color: surface.ink2),
+            Eyebrow(s.usLabel, color: surface.ink2),
             const SizedBox(height: 4),
             Text('$me & $p', style: t.headlineMedium),
             const SizedBox(height: 18),
@@ -40,25 +46,32 @@ class CoupleSpaceScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Eyebrow(s.whyWeStarted),
-                      Icon(Icons.lock_outline_rounded, size: 16, color: context.stage.accent),
+                      Flexible(child: Eyebrow(s.whyWeStarted)),
+                      Icon(Icons.lock_outline_rounded,
+                          size: 16, color: context.stage.accent),
                     ],
                   ),
                   const SizedBox(height: 10),
                   Text(
                     app.originStory.isEmpty
-                        ? 'Write yours in onboarding. When $p writes theirs, you reveal them together.'
-                        : 'Yours is written. When $p writes theirs, reveal them together on the same evening, when you are both ready.',
+                        ? s.originRevealHintUnwritten(p)
+                        : s.originRevealHintWritten(p),
                     style: t.bodyMedium,
                   ),
                   const SizedBox(height: 12),
-                  GlassButton(
-                    label: 'Plan the reveal',
-                    primary: false,
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Reveal needs pairing — couple-layer build.')),
+                  if (app.originStory.isEmpty)
+                    GlassButton(
+                      label: s.editOriginStory,
+                      primary: false,
+                      icon: Icons.edit_outlined,
+                      onPressed: () => context.push(Routes.editOrigin),
+                    )
+                  else
+                    GlassButton(
+                      label: s.planTheReveal,
+                      primary: false,
+                      onPressed: notYet,
                     ),
-                  ),
                 ],
               ),
             ),
@@ -67,13 +80,20 @@ class CoupleSpaceScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Eyebrow('Love map'),
+                  Eyebrow(s.loveMap),
                   const SizedBox(height: 10),
-                  _Row(k: '$p’s current stress', v: 'Tap to add'),
+                  _Row(k: s.currentStress(p), v: s.tapToAdd, onTap: notYet),
                   Divider(color: surface.hairline, height: 16),
-                  _Row(k: '$p’s small joy', v: 'Tap to add'),
+                  _Row(k: s.smallJoy(p), v: s.tapToAdd, onTap: notYet),
                   Divider(color: surface.hairline, height: 16),
-                  _Row(k: 'You still don’t know', v: '$p’s dream trip →', accent: true),
+                  // Was "You still don't know · Vikram's dream trip →", which
+                  // read like an insight the app had derived. It had derived
+                  // nothing; it is a prompt.
+                  _Row(
+                      k: s.askAbout(p),
+                      v: s.dreamTripPrompt,
+                      accent: true,
+                      onTap: notYet),
                 ],
               ),
             ),
@@ -84,17 +104,19 @@ class CoupleSpaceScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: TintPanel(
-                      label: 'Next date',
+                      label: s.nextDate,
                       color: surface.gold,
-                      child: const Text('Nothing planned · ask Saath for one that fits you both'),
+                      child: Text(s.noDatePlanned),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TintPanel(
-                      label: 'Shared goal',
+                      label: s.sharedGoal,
                       color: context.stage.accent,
-                      child: const Text('One tech-free dinner a week · start this week'),
+                      // Was a hardcoded goal presented as though the couple
+                      // had set it.
+                      child: Text(s.noSharedGoal),
                     ),
                   ),
                 ],
@@ -102,10 +124,10 @@ class CoupleSpaceScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             GlassButton(
-              label: 'Open a Repair Room',
+              label: s.openRepairRoom,
               primary: false,
               icon: Icons.meeting_room_outlined,
-              onPressed: () => context.push('/repair'),
+              onPressed: () => context.push(Routes.repair),
             ),
           ],
         ),
@@ -115,23 +137,45 @@ class CoupleSpaceScreen extends ConsumerWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.k, required this.v, this.accent = false});
+  const _Row(
+      {required this.k, required this.v, this.accent = false, this.onTap});
+
   final String k;
   final String v;
   final bool accent;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 15);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Flexible(child: Text(k, style: t?.copyWith(color: context.surface.ink2))),
-        const SizedBox(width: 12),
-        Flexible(
-          child: Text(v, textAlign: TextAlign.right, style: t?.copyWith(color: accent ? context.stage.accent : null)),
+    return Semantics(
+      button: onTap != null,
+      label: '$k, $v',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                  child:
+                      Text(k, style: t?.copyWith(color: context.surface.ink2))),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  v,
+                  textAlign: TextAlign.right,
+                  style:
+                      t?.copyWith(color: accent ? context.stage.accent : null),
+                ),
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 }

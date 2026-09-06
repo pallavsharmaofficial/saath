@@ -18,7 +18,12 @@ class AppShell extends ConsumerWidget {
       body: navigationShell,
       bottomNavigationBar: GlassTabBar(
         index: navigationShell.currentIndex,
-        onChanged: (i) => navigationShell.goBranch(i, initialLocation: i == navigationShell.currentIndex),
+        onChanged: (i) => navigationShell.goBranch(
+          i,
+          // Tapping the tab you are already on pops that branch back to its
+          // root, which is what both platforms' users expect.
+          initialLocation: i == navigationShell.currentIndex,
+        ),
         items: [
           (icon: Icons.home_outlined, label: s.tabToday),
           (icon: Icons.chat_bubble_outline_rounded, label: s.tabCounsellor),

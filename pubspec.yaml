@@ -1,7 +1,10 @@
 name: saath_hamesha
-description: Saath Hamesha — an on-device AI relationship counsellor.
+description: "Saath — an on-device AI relationship counsellor. Free, private, offline."
 publish_to: "none"
-version: 0.1.0+1
+
+# versionName+versionCode for both stores. Bump the build number on every
+# TestFlight / Play internal upload.
+version: 0.2.0+2
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -10,11 +13,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   flutter_riverpod: ^2.5.1
   go_router: ^14.2.0
-  google_fonts: ^6.2.1
   shared_preferences: ^2.3.2
-  intl: ^0.19.0
+  intl: ^0.20.2
+  # Dials the helplines on the safety screen. This is the only plugin that
+  # reaches outside the app, and only when the user taps a helpline.
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
@@ -23,5 +30,26 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
   assets:
     - assets/backgrounds/
+    - assets/fonts/OFL.txt
+
+  # Bundled, not fetched. google_fonts downloads from fonts.gstatic.com on first
+  # run, which breaks the offline promise and quietly contradicts the privacy
+  # claim on the welcome screen. These are subset variable fonts (~890 KB total):
+  # Latin for Sora/Source Serif, Devanagari for Noto Serif Devanagari.
+  # Weight comes from the `wght` axis via TextStyle.fontVariations — see
+  # lib/theme/typography.dart.
+  fonts:
+    - family: Sora
+      fonts:
+        - asset: assets/fonts/Sora-Variable.ttf
+    - family: SourceSerif
+      fonts:
+        - asset: assets/fonts/SourceSerif4-Variable.ttf
+        - asset: assets/fonts/SourceSerif4-Italic-Variable.ttf
+          style: italic
+    - family: NotoSerifDevanagari
+      fonts:
+        - asset: assets/fonts/NotoSerifDevanagari-Variable.ttf

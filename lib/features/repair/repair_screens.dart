@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/router.dart';
 import '../../core/app_state.dart';
 import '../../core/strings.dart';
 import '../../theme/theme.dart';
@@ -11,26 +13,65 @@ import '../../theme/tokens.dart';
 import '../../ui/atmosphere.dart';
 import '../../ui/glass.dart';
 import '../counsellor/engine.dart';
+import '../counsellor/safety.dart';
 
 /// Repair Room, single-device rehearsal mode: until pairing ships, the
 /// partner's side is typed on the same phone (handed over), which is also
 /// how the feature will demo in the beta.
 class RepairIntroScreen extends ConsumerStatefulWidget {
   const RepairIntroScreen({super.key});
+
   @override
   ConsumerState<RepairIntroScreen> createState() => _RepairIntroScreenState();
 }
 
+enum _RepairStep { mySide, handover, theirSide }
+
 class _RepairIntroScreenState extends ConsumerState<RepairIntroScreen> {
   final _mine = TextEditingController();
   final _theirs = TextEditingController();
-  int _step = 0; // 0 = my side, 1 = hand over, 2 = their side
+  _RepairStep _step = _RepairStep.mySide;
+
+  @override
+  void initState() {
+    super.initState();
+    _mine.addListener(_refresh);
+    _theirs.addListener(_refresh);
+  }
+
+  void _refresh() => setState(() {});
 
   @override
   void dispose() {
-    _mine.dispose();
-    _theirs.dispose();
+    _mine
+      ..removeListener(_refresh)
+      ..dispose();
+    _theirs
+      ..removeListener(_refresh)
+      ..dispose();
     super.dispose();
+  }
+
+  TextEditingController get _active =>
+      _step == _RepairStep.theirSide ? _theirs : _mine;
+
+  bool get _canAdvance => _active.text.trim().length >= 10;
+
+  void _next() {
+    if (_step == _RepairStep.mySide) {
+      setState(() => _step = _RepairStep.handover);
+      return;
+    }
+    final sides = RepairSides(_mine.text.trim(), _theirs.text.trim());
+
+    // Both accounts go through the guardrail before either is merged. A room
+    // is exactly the wrong place to be doing "who said what" if one side has
+    // just disclosed being hit.
+    if (safetyClassifier.fires(sides.a) || safetyClassifier.fires(sides.b)) {
+      context.pushReplacement(Routes.safety);
+      return;
+    }
+    context.pushReplacement(Routes.repairMerged, extra: sides);
   }
 
   @override
@@ -39,8 +80,8 @@ class _RepairIntroScreenState extends ConsumerState<RepairIntroScreen> {
     final app = ref.watch(appStateProvider);
     final t = Theme.of(context).textTheme;
     final surface = context.surface;
-    final who = _step == 2 ? app.partnerOrDefault : (app.userName.isEmpty ? 'you' : app.userName);
-    final ctrl = _step == 2 ? _theirs : _mine;
+    final theirTurn = _step == _RepairStep.theirSide;
+    final who = theirTurn ? app.partnerOrDefault : app.userOrDefault;
 
     return StageTheme(
       stage: ResolutionStage.working,
@@ -50,47 +91,66 @@ class _RepairIntroScreenState extends ConsumerState<RepairIntroScreen> {
           background: Backgrounds.working,
           child: Column(
             children: [
-              GlassTopBar(title: s.repairRoom),
+              GlassTopBar(title: s.repairRoom, onBack: () => context.pop()),
               Expanded(
-                child: _step == 1
-                    ? _Handover(partner: app.partnerOrDefault, onReady: () => setState(() => _step = 2))
+                child: _step == _RepairStep.handover
+                    ? _Handover(
+                        s: s,
+                        partner: app.partnerOrDefault,
+                        onReady: () =>
+                            setState(() => _step = _RepairStep.theirSide),
+                      )
                     : ListView(
                         padding: const EdgeInsets.fromLTRB(24, 6, 24, 24),
                         children: [
-                          Eyebrow(_step == 2 ? '${app.partnerOrDefault}’s side · private' : 'Your side · private'),
+                          Eyebrow(theirTurn
+                              ? s.partnerSidePrivate(app.partnerOrDefault)
+                              : s.yourSidePrivate),
                           const SizedBox(height: 8),
-                          Text('What happened, as $who saw it?', style: t.headlineMedium?.copyWith(fontSize: 26)),
+                          Text(s.whatHappenedAs(who),
+                              style: t.headlineMedium?.copyWith(fontSize: 26)),
                           const SizedBox(height: 8),
-                          Text('Only Saath reads this. Your partner sees the neutral version, never your words.',
-                              style: t.bodySmall?.copyWith(fontSize: 15, color: surface.ink2)),
+                          Text(s.onlySaathReads,
+                              style: t.bodySmall?.copyWith(
+                                  fontSize: 15, color: surface.ink2)),
                           const SizedBox(height: 18),
                           GlassPanel(
                             strong: true,
                             child: TextField(
-                              controller: ctrl,
+                              // A fresh controller per side; the partner never
+                              // sees what the first person typed.
+                              key: ValueKey(_step),
+                              controller: _active,
                               minLines: 6,
                               maxLines: 12,
+                              autocorrect: false,
                               textCapitalization: TextCapitalization.sentences,
                               style: t.bodyLarge,
-                              decoration: const InputDecoration.collapsed(hintText: 'Start anywhere…'),
+                              decoration: InputDecoration.collapsed(
+                                hintText: s.startAnywhere,
+                                hintStyle: TextStyle(color: surface.ink2),
+                              ),
                             ),
                           ),
+                          if (!_canAdvance &&
+                              _active.text.trim().isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Text(s.needBothSides,
+                                style: t.bodySmall?.copyWith(
+                                    fontSize: 13, color: surface.ink2)),
+                          ],
                         ],
                       ),
               ),
-              if (_step != 1)
+              if (_step != _RepairStep.handover)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 44),
+                  padding: EdgeInsets.fromLTRB(
+                      24, 0, 24, MediaQuery.paddingOf(context).bottom + 20),
                   child: GlassButton(
-                    label: _step == 0 ? 'Submit my side' : 'Both sides in — merge',
-                    onPressed: () {
-                      if (_step == 0) {
-                        setState(() => _step = 1);
-                      } else {
-                        context.pushReplacement('/repair/merged',
-                            extra: (a: _mine.text.trim(), b: _theirs.text.trim()));
-                      }
-                    },
+                    label: theirTurn ? s.bothSidesMerge : s.submitMySide,
+                    // Was unconditionally enabled, so an empty room merged two
+                    // empty strings into a confident fabricated summary.
+                    onPressed: _canAdvance ? _next : null,
                   ),
                 ),
             ],
@@ -102,7 +162,10 @@ class _RepairIntroScreenState extends ConsumerState<RepairIntroScreen> {
 }
 
 class _Handover extends StatelessWidget {
-  const _Handover({required this.partner, required this.onReady});
+  const _Handover(
+      {required this.s, required this.partner, required this.onReady});
+
+  final S s;
   final String partner;
   final VoidCallback onReady;
 
@@ -110,51 +173,60 @@ class _Handover extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 40, 28, 44),
+      padding: const EdgeInsets.fromLTRB(28, 40, 28, 24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lock_outline_rounded, size: 36, color: context.stage.accent),
+          Icon(Icons.lock_outline_rounded,
+              size: 36, color: context.stage.accent),
           const SizedBox(height: 18),
-          Text('Your side is sealed.', style: t.headlineMedium),
+          Text(s.sideSealed, style: t.headlineMedium),
           const SizedBox(height: 10),
-          Text('Hand the phone to $partner. They will not see what you wrote.',
+          Text(s.handToPartner(partner),
               style: t.bodyLarge?.copyWith(color: context.surface.ink2)),
-          const Spacer(),
-          GlassButton(label: 'I am $partner', onPressed: onReady),
+          const SizedBox(height: 32),
+          GlassButton(label: s.iAmPartner(partner), onPressed: onReady),
         ],
       ),
     );
   }
 }
 
-final _mergeProvider = FutureProvider.autoDispose.family<RepairMerge, ({String a, String b})>((ref, sides) {
-  final a = ref.read(appStateProvider);
+final _mergeProvider =
+    FutureProvider.autoDispose.family<RepairMerge, RepairSides>((ref, sides) {
+  final a = ref.watch(appStateProvider);
   return ref.read(counsellorEngineProvider).mergeRepair(
-        sides.a,
-        sides.b,
+        sides,
         CounsellorContext(
           userName: a.userName,
           partnerName: a.partnerName,
           originStory: a.originStory,
-          hindi: a.language == AppLanguage.hi,
+          hindi: a.isHindi,
         ),
       );
 });
 
 class RepairMergedScreen extends ConsumerStatefulWidget {
   const RepairMergedScreen({super.key, required this.sides});
-  final ({String a, String b}) sides;
+
+  final RepairSides sides;
+
   @override
   ConsumerState<RepairMergedScreen> createState() => _RepairMergedScreenState();
 }
 
 class _RepairMergedScreenState extends ConsumerState<RepairMergedScreen> {
   static const _turnLength = Duration(minutes: 2);
+  static const _totalTurns = 4;
+
   int _turn = 0;
   Duration _left = _turnLength;
   Timer? _timer;
+
+  bool get _running => _timer?.isActive ?? false;
+  bool get _turnFinished => !_running && _left == Duration.zero;
+  bool get _allTurnsDone => _turn >= _totalTurns - 1 && _turnFinished;
 
   @override
   void dispose() {
@@ -165,21 +237,32 @@ class _RepairMergedScreenState extends ConsumerState<RepairMergedScreen> {
   void _startTurn() {
     _timer?.cancel();
     setState(() => _left = _turnLength);
-    _timer = Timer.periodic(const Duration(seconds: 1), (tm) {
-      if (_left.inSeconds <= 1) {
-        tm.cancel();
-        setState(() {
-          _left = Duration.zero;
-          _turn = _turn + 1 > 4 ? 4 : _turn + 1;
-        });
-        if (_turn >= 4 && mounted) context.pushReplacement('/repair/close');
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      // The old version navigated from inside the tick and only checked
+      // `mounted` after calling setState, so a backgrounded room could push a
+      // route onto a dead context.
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final next = _left - const Duration(seconds: 1);
+      if (next <= Duration.zero) {
+        timer.cancel();
+        setState(() => _left = Duration.zero);
       } else {
-        setState(() => _left -= const Duration(seconds: 1));
+        setState(() => _left = next);
       }
     });
   }
 
-  String _mmss(Duration d) =>
+  void _nextTurn() {
+    setState(() {
+      _turn = (_turn + 1).clamp(0, _totalTurns - 1);
+      _left = _turnLength;
+    });
+  }
+
+  static String _mmss(Duration d) =>
       '${d.inMinutes.toString().padLeft(2, '0')}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
 
   @override
@@ -190,10 +273,13 @@ class _RepairMergedScreenState extends ConsumerState<RepairMergedScreen> {
     final t = Theme.of(context).textTheme;
     final surface = context.surface;
     final dark = context.isDark;
-    final me = app.userName.isEmpty ? 'You' : app.userName;
+    final me = app.userOrDefault;
     final p = app.partnerOrDefault;
+
+    // The partner speaks first: the person who opened the room has already had
+    // their say, in writing.
     final speakers = [(p, me), (me, p), (p, me), (me, p)];
-    final ti = _turn > 3 ? 3 : _turn;
+    final (speaker, listener) = speakers[_turn];
 
     return StageTheme(
       stage: ResolutionStage.working,
@@ -204,11 +290,18 @@ class _RepairMergedScreenState extends ConsumerState<RepairMergedScreen> {
             children: [
               GlassTopBar(
                 title: s.repairRoom,
+                onBack: () => context.pop(),
                 trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.timer_outlined, size: 18, color: surface.ink2),
                     const SizedBox(width: 6),
-                    Text(_mmss(_left), style: t.labelLarge?.copyWith(fontSize: 13, color: surface.ink2)),
+                    Text(_mmss(_left),
+                        style: t.labelLarge?.copyWith(
+                          fontSize: 13,
+                          color: _running ? context.stage.accent : surface.ink2,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        )),
                   ],
                 ),
               ),
@@ -218,63 +311,157 @@ class _RepairMergedScreenState extends ConsumerState<RepairMergedScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircularProgressIndicator(color: context.stage.accent, strokeWidth: 2),
+                        CircularProgressIndicator(
+                            color: context.stage.accent, strokeWidth: 2),
                         const SizedBox(height: 16),
-                        Text('Finding the shared facts…', style: t.bodyMedium?.copyWith(color: surface.ink2)),
+                        Text(s.repairMerging,
+                            style: t.bodyMedium?.copyWith(color: surface.ink2)),
                       ],
                     ),
                   ),
-                  error: (e, _) => Center(child: Text('Could not merge: $e')),
+                  error: (e, _) => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(28),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            e is CounsellorException
+                                ? s.needBothSides
+                                : s.repairMergeFailed,
+                            textAlign: TextAlign.center,
+                            style: t.bodyLarge,
+                          ),
+                          const SizedBox(height: 20),
+                          GlassButton(
+                            label: s.retry,
+                            expand: false,
+                            onPressed: () =>
+                                ref.invalidate(_mergeProvider(widget.sides)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   data: (m) => ListView(
                     padding: const EdgeInsets.fromLTRB(24, 6, 24, 40),
                     children: [
                       Eyebrow(s.bothSidesIn),
                       const SizedBox(height: 6),
-                      Text(m.title, style: t.headlineMedium?.copyWith(fontSize: 26)),
+                      Text(m.title,
+                          style: t.headlineMedium?.copyWith(fontSize: 26)),
                       const SizedBox(height: 16),
-                      TintPanel(label: s.youBothAgree, color: dark ? Palette.sageDark : Palette.sage, child: Text(m.agreed)),
+                      TintPanel(
+                        label: s.youBothAgree,
+                        color: dark ? Palette.sageDark : Palette.sage,
+                        child: Text(m.agreed),
+                      ),
                       const SizedBox(height: 10),
                       IntrinsicHeight(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Expanded(child: TintPanel(label: '$me heard', color: surface.ink2, child: Text(m.sideA.replaceFirst('$me heard: ', '')))),
+                            Expanded(
+                              child: TintPanel(
+                                label: s.heardLabel(me),
+                                color: surface.ink2,
+                                // The engine returns the neutralised phrase
+                                // itself now; the screen used to strip an
+                                // English prefix with replaceFirst, which
+                                // silently did nothing in Hindi.
+                                child: Text(m.sideA),
+                              ),
+                            ),
                             const SizedBox(width: 10),
-                            Expanded(child: TintPanel(label: '$p said', color: surface.ink2, child: Text(m.sideB.replaceFirst('$p said: ', '')))),
+                            Expanded(
+                              child: TintPanel(
+                                label: s.saidLabel(p),
+                                color: surface.ink2,
+                                child: Text(m.sideB),
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 10),
-                      TintPanel(label: s.storiesSplit, color: surface.gold, child: Text(m.split)),
+                      TintPanel(
+                          label: s.storiesSplit,
+                          color: surface.gold,
+                          child: Text(m.split)),
                       const SizedBox(height: 16),
                       GlassPanel(
                         strong: true,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Eyebrow('Turn ${_turn + 1} of 4 · ${speakers[ti].$1} speaks, ${speakers[ti].$2} listens'),
+                            Eyebrow(s.turnHeader(
+                                _turn + 1, _totalTurns, speaker, listener)),
                             const SizedBox(height: 8),
-                            Text(_turn == 0 ? m.firstTurn
-                                : '${speakers[ti].$2}, repeat back what you heard, without defending. Then say one thing you need.',
-                                style: t.bodyMedium),
+                            Text(
+                              _turn == 0
+                                  ? m.firstTurn
+                                  : s.turnInstruction(listener),
+                              style: t.bodyMedium,
+                            ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          Expanded(flex: 6, child: GlassButton(label: _timer?.isActive == true ? 'Turn running' : s.startTurn, onPressed: _timer?.isActive == true ? null : _startTurn)),
+                          Expanded(
+                            flex: 6,
+                            child: GlassButton(
+                              label: switch ((
+                                _running,
+                                _turnFinished,
+                                _allTurnsDone
+                              )) {
+                                (true, _, _) => s.turnRunning,
+                                (_, true, true) => s.finishRepair,
+                                (_, true, false) => s.continueLabel,
+                                _ => s.startTurn,
+                              },
+                              onPressed: switch ((
+                                _running,
+                                _turnFinished,
+                                _allTurnsDone
+                              )) {
+                                (true, _, _) => null,
+                                (_, true, true) => () =>
+                                    context.pushReplacement(Routes.repairClose),
+                                (_, true, false) => _nextTurn,
+                                _ => _startTurn,
+                              },
+                            ),
+                          ),
                           const SizedBox(width: 10),
-                          Expanded(flex: 4, child: GlassButton(label: s.coolDown, primary: false, icon: Icons.timer_outlined, onPressed: () => context.push('/repair/cooldown'))),
+                          Expanded(
+                            flex: 4,
+                            child: GlassButton(
+                              label: s.coolDown,
+                              primary: false,
+                              icon: Icons.timer_outlined,
+                              onPressed: () =>
+                                  context.push(Routes.repairCoolDown),
+                            ),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: TextButton(
-                          onPressed: () => context.pushReplacement('/repair/close'),
-                          child: Text('Skip to closing (dev)', style: t.bodySmall?.copyWith(color: surface.ink2)),
+                      // A shortcut past the whole feature does not belong in a
+                      // build a beta couple is holding.
+                      if (kDebugMode) ...[
+                        const SizedBox(height: 12),
+                        Center(
+                          child: TextButton(
+                            onPressed: () =>
+                                context.pushReplacement(Routes.repairClose),
+                            child: Text('Skip to closing (debug)',
+                                style:
+                                    t.bodySmall?.copyWith(color: surface.ink2)),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -287,24 +474,50 @@ class _RepairMergedScreenState extends ConsumerState<RepairMergedScreen> {
   }
 }
 
-class CoolDownScreen extends StatefulWidget {
+class CoolDownScreen extends ConsumerStatefulWidget {
   const CoolDownScreen({super.key});
+
   @override
-  State<CoolDownScreen> createState() => _CoolDownScreenState();
+  ConsumerState<CoolDownScreen> createState() => _CoolDownScreenState();
 }
 
-class _CoolDownScreenState extends State<CoolDownScreen> with SingleTickerProviderStateMixin {
+class _CoolDownScreenState extends ConsumerState<CoolDownScreen>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _breath =
-      AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat(reverse: true);
+      AnimationController(vsync: this, duration: const Duration(seconds: 8));
   Duration _left = const Duration(minutes: 20);
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_left.inSeconds > 0) setState(() => _left -= const Duration(seconds: 1));
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_left <= Duration.zero) {
+        // The old timer kept ticking and rebuilding at 00:00 for as long as the
+        // screen stayed open.
+        timer.cancel();
+        setState(() => _left = Duration.zero);
+        return;
+      }
+      setState(() => _left -= const Duration(seconds: 1));
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Honour "reduce motion": an 8-second pulsing circle is exactly the kind of
+    // ambient animation that setting exists for.
+    if (context.reduceMotion) {
+      _breath.stop();
+      _breath.value = 0.5;
+    } else if (!_breath.isAnimating) {
+      _breath.repeat(reverse: true);
+    }
   }
 
   @override
@@ -316,46 +529,73 @@ class _CoolDownScreenState extends State<CoolDownScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context, ref);
     final t = Theme.of(context).textTheme;
+    final done = _left == Duration.zero;
     final mm = _left.inMinutes.toString().padLeft(2, '0');
     final ss = (_left.inSeconds % 60).toString().padLeft(2, '0');
+
     return StageTheme(
       stage: ResolutionStage.calm,
       child: Scaffold(
         body: Atmosphere(
           background: Backgrounds.calm,
           child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
-              child: Column(
-                children: [
-                  const Spacer(),
-                  AnimatedBuilder(
-                    animation: _breath,
-                    builder: (context, _) {
-                      final v = Curves.easeInOut.transform(_breath.value);
-                      return Container(
-                        width: 160 + 80 * v,
-                        height: 160 + 80 * v,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: context.stage.accent.withOpacity(0.10 + 0.10 * v),
-                          border: Border.all(color: context.stage.accent.withOpacity(0.4)),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(v < 0.5 ? 'breathe in' : 'breathe out',
-                            style: t.labelLarge?.copyWith(color: context.stage.accent)),
-                      );
-                    },
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+                child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(minHeight: constraints.maxHeight - 48),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      AnimatedBuilder(
+                        animation: _breath,
+                        builder: (context, _) {
+                          final v = Curves.easeInOut.transform(_breath.value);
+                          return Container(
+                            width: 160 + 80 * v,
+                            height: 160 + 80 * v,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: context.stage.accent
+                                  .withValues(alpha: 0.10 + 0.10 * v),
+                              border: Border.all(
+                                  color: context.stage.accent
+                                      .withValues(alpha: 0.4)),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              v < 0.5 ? s.breatheIn : s.breatheOut,
+                              style: t.labelLarge
+                                  ?.copyWith(color: context.stage.accent),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        '$mm:$ss',
+                        style: t.displayLarge?.copyWith(
+                            fontFeatures: const [FontFeature.tabularFigures()]),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        done ? s.coolDownDone : s.coolDownBody,
+                        textAlign: TextAlign.center,
+                        style:
+                            t.bodyMedium?.copyWith(color: context.surface.ink2),
+                      ),
+                      const SizedBox(height: 24),
+                      GlassButton(
+                        label: s.backToRoom,
+                        primary: done,
+                        onPressed: () => context.pop(),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 32),
-                  Text('$mm:$ss', style: t.displayLarge?.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
-                  const SizedBox(height: 8),
-                  Text('Twenty minutes is how long a flooded nervous system takes to settle. The room will still be here.',
-                      textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: context.surface.ink2)),
-                  const Spacer(),
-                  GlassButton(label: 'Back to the room', primary: false, onPressed: () => context.pop()),
-                ],
+                ),
               ),
             ),
           ),
@@ -374,55 +614,83 @@ class RepairCloseScreen extends ConsumerWidget {
     final app = ref.watch(appStateProvider);
     final t = Theme.of(context).textTheme;
     final surface = context.surface;
+
     return StageTheme(
       stage: ResolutionStage.calm,
       child: Scaffold(
         body: Atmosphere(
           background: Backgrounds.calm,
           child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Spacer(),
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: context.stage.accentSoft,
-                      border: Border.all(color: context.stage.accent.withOpacity(0.35)),
-                    ),
-                    child: Icon(Icons.check_rounded, color: context.stage.accent, size: 26),
-                  ),
-                  const SizedBox(height: 18),
-                  const Eyebrow('Repaired'),
-                  const SizedBox(height: 10),
-                  Text('You both stayed. That is the whole thing.', style: t.headlineMedium?.copyWith(fontSize: 30)),
-                  const SizedBox(height: 12),
-                  Text('The fight was never the point. Feeling alone in it was. You said that out loud tonight — and you were heard.',
-                      style: t.bodyLarge?.copyWith(color: surface.ink2)),
-                  const SizedBox(height: 18),
-                  GlassPanel(
-                    strong: true,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Eyebrow('${s.whyWeStarted} · in your words'),
-                        const SizedBox(height: 8),
-                        Text(
-                          app.originStory.isEmpty ? 'You have not written yours yet.' : '“${app.originStory}”',
-                          style: t.bodyLarge?.copyWith(fontSize: 18, fontStyle: FontStyle.italic),
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+                child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(minHeight: constraints.maxHeight - 48),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: context.stage.accentSoft,
+                          border: Border.all(
+                              color:
+                                  context.stage.accent.withValues(alpha: 0.35)),
                         ),
-                      ],
-                    ),
+                        child: Icon(Icons.check_rounded,
+                            color: context.stage.accent, size: 26),
+                      ),
+                      const SizedBox(height: 18),
+                      Eyebrow(s.repaired),
+                      const SizedBox(height: 10),
+                      Text(s.repairedTitle,
+                          style: t.headlineMedium?.copyWith(fontSize: 30)),
+                      const SizedBox(height: 12),
+                      Text(s.repairedBody,
+                          style: t.bodyLarge?.copyWith(color: surface.ink2)),
+                      const SizedBox(height: 18),
+                      GlassPanel(
+                        strong: true,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Eyebrow('${s.whyWeStarted} · ${s.inYourWords}'),
+                            const SizedBox(height: 8),
+                            Text(
+                              app.originStory.isEmpty
+                                  ? s.originNotWritten
+                                  : '“${app.originStory}”',
+                              style: t.bodyLarge?.copyWith(
+                                  fontSize: 18, fontStyle: FontStyle.italic),
+                            ),
+                            if (app.originStory.isEmpty) ...[
+                              const SizedBox(height: 12),
+                              GlassChip(
+                                label: s.editOriginStory,
+                                icon: Icons.edit_outlined,
+                                onTap: () => context.push(Routes.editOrigin),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      GlassButton(
+                          label: s.closeRoom,
+                          onPressed: () => context.go(Routes.today)),
+                      const SizedBox(height: 10),
+                      GlassButton(
+                        label: s.planSmallThing,
+                        primary: false,
+                        onPressed: () => context.go(Routes.us),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  GlassButton(label: s.closeRoom, onPressed: () => context.go('/')),
-                  const SizedBox(height: 10),
-                  GlassButton(label: s.planSmallThing, primary: false, onPressed: () => context.go('/us')),
-                ],
+                ),
               ),
             ),
           ),

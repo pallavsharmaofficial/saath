@@ -1,6 +1,11 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 
 /// Brand palette. Names match the design canvas.
+///
+/// There is deliberately no red in the app — arguments are already red enough.
+/// "Error" states borrow rose, which is the counsellor's own voice colour.
 class Palette {
   Palette._();
 
@@ -59,7 +64,7 @@ class StageTokens extends ThemeExtension<StageTokens> {
         return StageTokens(
           stage: stage,
           accent: dark ? Palette.roseDark : Palette.rose,
-          accentSoft: Palette.rose.withOpacity(dark ? 0.22 : 0.14),
+          accentSoft: Palette.rose.withValues(alpha: dark ? 0.22 : 0.14),
           radius: 12,
           buttonRadius: 12,
           blur: 14,
@@ -68,7 +73,7 @@ class StageTokens extends ThemeExtension<StageTokens> {
         return StageTokens(
           stage: stage,
           accent: dark ? Palette.plumDark : Palette.plum,
-          accentSoft: Palette.plum.withOpacity(dark ? 0.22 : 0.14),
+          accentSoft: Palette.plum.withValues(alpha: dark ? 0.22 : 0.14),
           radius: 18,
           buttonRadius: 16,
           blur: 18,
@@ -77,7 +82,7 @@ class StageTokens extends ThemeExtension<StageTokens> {
         return StageTokens(
           stage: stage,
           accent: dark ? Palette.sageDark : Palette.sage,
-          accentSoft: Palette.sage.withOpacity(dark ? 0.22 : 0.14),
+          accentSoft: Palette.sage.withValues(alpha: dark ? 0.22 : 0.14),
           radius: 26,
           buttonRadius: 26,
           blur: 24,
@@ -111,13 +116,11 @@ class StageTokens extends ThemeExtension<StageTokens> {
       stage: t < 0.5 ? stage : other.stage,
       accent: Color.lerp(accent, other.accent, t)!,
       accentSoft: Color.lerp(accentSoft, other.accentSoft, t)!,
-      radius: lerpDouble(radius, other.radius, t),
-      buttonRadius: lerpDouble(buttonRadius, other.buttonRadius, t),
-      blur: lerpDouble(blur, other.blur, t),
+      radius: lerpDouble(radius, other.radius, t)!,
+      buttonRadius: lerpDouble(buttonRadius, other.buttonRadius, t)!,
+      blur: lerpDouble(blur, other.blur, t)!,
     );
   }
-
-  static double lerpDouble(double a, double b, double t) => a + (b - a) * t;
 }
 
 /// Fixed surface tokens per brightness (glass, veil, borders).
@@ -174,7 +177,31 @@ class SurfaceTokens extends ThemeExtension<SurfaceTokens> {
   );
 
   @override
-  SurfaceTokens copyWith({Color? bg}) => this;
+  SurfaceTokens copyWith({
+    Color? bg,
+    Color? ink,
+    Color? ink2,
+    Color? glass,
+    Color? glassSoft,
+    Color? glassBorder,
+    Color? veil,
+    Color? hairline,
+    Color? gold,
+    Color? shadow,
+  }) {
+    return SurfaceTokens(
+      bg: bg ?? this.bg,
+      ink: ink ?? this.ink,
+      ink2: ink2 ?? this.ink2,
+      glass: glass ?? this.glass,
+      glassSoft: glassSoft ?? this.glassSoft,
+      glassBorder: glassBorder ?? this.glassBorder,
+      veil: veil ?? this.veil,
+      hairline: hairline ?? this.hairline,
+      gold: gold ?? this.gold,
+      shadow: shadow ?? this.shadow,
+    );
+  }
 
   @override
   SurfaceTokens lerp(ThemeExtension<SurfaceTokens>? other, double t) {
@@ -195,7 +222,14 @@ class SurfaceTokens extends ThemeExtension<SurfaceTokens> {
 }
 
 extension ThemeTokensX on BuildContext {
-  SurfaceTokens get surface => Theme.of(this).extension<SurfaceTokens>()!;
-  StageTokens get stage => Theme.of(this).extension<StageTokens>()!;
+  SurfaceTokens get surface =>
+      Theme.of(this).extension<SurfaceTokens>() ?? SurfaceTokens.light;
+  StageTokens get stage =>
+      Theme.of(this).extension<StageTokens>() ??
+      StageTokens.of(ResolutionStage.working, Brightness.light);
   bool get isDark => Theme.of(this).brightness == Brightness.dark;
+
+  /// True when the platform asks for reduced motion. Long ambient animations
+  /// (the cool-down breathing circle, the 600 ms stage cross-fade) honour it.
+  bool get reduceMotion => MediaQuery.maybeDisableAnimationsOf(this) ?? false;
 }
