@@ -17,6 +17,38 @@ void main() {
     test('falls back to the small model when RAM is unknown', () {
       expect(SaathModel.recommendedFor(null), SaathModel.gemma31B);
     });
+
+    test('never auto-selects the ungated escape hatch', () {
+      // Qwen exists so a build can work with no Hugging Face account. It is
+      // three times the download of Gemma 1B and no better at Hindi, so it
+      // must only ever be an explicit choice.
+      for (final ram in [null, 0, 2048, 4096, 6144, 8192, 12288, 16384]) {
+        expect(
+          SaathModel.recommendedFor(ram),
+          isNot(SaathModel.qwen251_5B),
+          reason: 'ram=$ram',
+        );
+      }
+    });
+  });
+
+  group('engine types', () {
+    test('each model declares the chat template its family needs', () {
+      // The wrong template does not fail loudly, it just answers worse.
+      expect(SaathModel.gemma31B.engineType, ModelEngineType.gemma);
+      expect(SaathModel.gemma3nE2B.engineType, ModelEngineType.gemma);
+      expect(SaathModel.qwen251_5B.engineType, ModelEngineType.qwen);
+    });
+  });
+
+  group('GitHub release hosting', () {
+    test('every model except E2B fits inside a 2 GB release asset', () {
+      const limit = 2 * 1024 * 1024 * 1024;
+      expect(SaathModel.gemma31B.bytes, lessThan(limit));
+      expect(SaathModel.qwen251_5B.bytes, lessThan(limit));
+      // This one needs R2 or a Hugging Face repo of your own.
+      expect(SaathModel.gemma3nE2B.bytes, greaterThan(limit));
+    });
   });
 
   group('sizes', () {

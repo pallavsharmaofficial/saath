@@ -244,8 +244,11 @@ class _ModelRow extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final surface = context.surface;
     final st = context.stage;
-    final label =
-        model == SaathModel.gemma3nE2B ? s.modelBigName : s.modelSmallName;
+    final label = switch (model) {
+      SaathModel.gemma3nE2B => s.modelBigName,
+      SaathModel.gemma31B => s.modelSmallName,
+      SaathModel.qwen251_5B => s.modelOpenName,
+    };
 
     return Semantics(
       inMutuallyExclusiveGroup: true,
@@ -379,7 +382,11 @@ class _Installed extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     final surface = context.surface;
     final model = state.installed!;
-    final name = model == SaathModel.gemma3nE2B ? 'Gemma 3n E2B' : 'Gemma 3 1B';
+    final name = switch (model) {
+      SaathModel.gemma3nE2B => 'Gemma 3n E2B',
+      SaathModel.gemma31B => 'Gemma 3 1B',
+      SaathModel.qwen251_5B => 'Qwen 2.5 1.5B',
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

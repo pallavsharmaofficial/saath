@@ -14,6 +14,7 @@ enum SaathModel {
     bytes: 3655827456,
     minRamMb: 6144,
     maxTokens: 2048,
+    engineType: ModelEngineType.gemma,
   ),
 
   /// Gemma 3 1B, int4. The fallback that makes the app usable on a 4 GB phone
@@ -25,6 +26,29 @@ enum SaathModel {
     bytes: 584417280,
     minRamMb: 0,
     maxTokens: 1280,
+    engineType: ModelEngineType.gemma,
+  ),
+
+  /// Qwen 2.5 1.5B, q8. The escape hatch.
+  ///
+  /// Both Gemma repos are gated: a first run against them needs a Hugging Face
+  /// account that has accepted the licence. This one is not gated, and at
+  /// 1.6 GB it fits inside a GitHub release asset — so a build can have a real
+  /// counsellor with no second account and no payment card anywhere.
+  ///
+  /// It is not the default. It is nearly three times the download of Gemma 1B
+  /// for a model that is not better at Hindi. Use it to get something working,
+  /// then move to Gemma once the licence is accepted.
+  qwen251_5B(
+    id: 'qwen-2.5-1.5b-q8',
+    fileName: 'Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm',
+    repo: 'litert-community/Qwen2.5-1.5B-Instruct',
+    bytes: 1597931520,
+    // Never auto-selected: recommendedFor stops at the first match, and this
+    // sits after gemma31B's catch-all threshold.
+    minRamMb: 1 << 30,
+    maxTokens: 2048,
+    engineType: ModelEngineType.qwen,
   );
 
   const SaathModel({
@@ -34,6 +58,7 @@ enum SaathModel {
     required this.bytes,
     required this.minRamMb,
     required this.maxTokens,
+    required this.engineType,
   });
 
   final String id;
@@ -53,6 +78,11 @@ enum SaathModel {
   /// does not push it into swap on the phones it exists for.
   final int maxTokens;
 
+  /// Which prompt template family the runtime should apply. Getting this wrong
+  /// does not fail loudly — it produces subtly worse answers, which on a
+  /// counselling app is the worst kind of bug.
+  final ModelEngineType engineType;
+
   double get gigabytes => bytes / (1000 * 1000 * 1000);
 
   String get sizeLabel => bytes >= 1000000000
@@ -61,10 +91,10 @@ enum SaathModel {
 
   /// Where the file comes from.
   ///
-  /// Both upstream repos are gated, so a first run against Hugging Face needs
-  /// a token. The launch plan calls for our own mirror instead — that is what
-  /// [ModelHosting.baseUrl] is for, and it is also what stops a model rename
-  /// upstream from breaking first-run for everyone at once.
+  /// The Gemma repos are gated, so a first run against Hugging Face needs a
+  /// token. Point [ModelHosting.baseUrl] at somewhere you control instead —
+  /// a GitHub release works and is free (see tool/publish-model.sh) — which
+  /// also stops a rename upstream from breaking first-run for everyone.
   String get downloadUrl {
     const base = ModelHosting.baseUrl;
     if (base.isEmpty) {
@@ -93,6 +123,9 @@ enum SaathModel {
     return null;
   }
 }
+
+/// Which prompt template the LiteRT-LM runtime applies to a model.
+enum ModelEngineType { gemma, qwen }
 
 /// Where model files are served from.
 ///

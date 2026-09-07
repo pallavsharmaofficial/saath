@@ -264,7 +264,13 @@ class GemmaModelRuntime implements ModelRuntime {
     required void Function(int percent) onProgress,
   }) {
     return FlutterGemma.installModel(
-      modelType: ModelType.gemmaIt,
+      // Getting this wrong does not fail loudly — it applies the wrong chat
+      // template and produces subtly worse answers, which on a counselling
+      // app is the worst kind of bug.
+      modelType: switch (model.engineType) {
+        ModelEngineType.gemma => ModelType.gemmaIt,
+        ModelEngineType.qwen => ModelType.qwen,
+      },
       fileType: ModelFileType.litertlm,
     )
         .fromNetwork(

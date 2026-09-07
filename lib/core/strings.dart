@@ -171,6 +171,8 @@ class S {
       _t('Better Hindi, needs 6 GB', 'बेहतर हिंदी, 6 GB चाहिए');
   String get modelSmallName =>
       _t('Lighter, works on 4 GB', 'हल्का, 4 GB पर चलता है');
+  String get modelOpenName =>
+      _t('No licence needed, larger', 'बिना लाइसेंस, बड़ा');
   String get modelNotConfigured => _t(
         'This build has no download host configured, so the counsellor stays in preview.',
         'इस बिल्ड में डाउनलोड होस्ट सेट नहीं है, इसलिए काउंसलर प्रीव्यू में ही रहेगा।',
