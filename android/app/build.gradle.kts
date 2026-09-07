@@ -39,6 +39,33 @@ android {
         localeFilters += setOf("en", "hi")
     }
 
+    // Qualcomm NPU delegate libraries, shipped by flutter_gemma for four chip
+    // generations at once. Measured on this app:
+    //
+    //   with QNN     134 MB APK   (124.7 MB of native libraries)
+    //   without QNN   ~80 MB APK  (54.4 MB saved)
+    //
+    // Any given phone uses at most one of the four, so most of that 54 MB is
+    // dead weight on any individual device — but there is no way to pick at
+    // build time, and dropping them means CPU/GPU inference on Snapdragon,
+    // which is most of the Indian market.
+    //
+    // Left ON by default: a counsellor that answers slowly is a worse product
+    // than a larger download, and the 584 MB model dwarfs this either way.
+    // Flip it for a smaller build to share directly:
+    //
+    //   flutter build apk --release --target-platform android-arm64 \
+    //     -PsaathExcludeQnn=true
+    //
+    // Measure tokens/sec on real hardware before making this permanent.
+    if (project.findProperty("saathExcludeQnn") == "true") {
+        packaging {
+            jniLibs {
+                excludes += setOf("**/libQnn*.so")
+            }
+        }
+    }
+
     signingConfigs {
         if (hasReleaseKeystore) {
             create("release") {

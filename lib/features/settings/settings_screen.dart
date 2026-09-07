@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/router.dart';
 import '../../core/app_info.dart';
@@ -12,12 +13,14 @@ import '../../core/couple_space.dart';
 import '../../core/helplines.dart';
 import '../../core/journal.dart';
 import '../../core/strings.dart';
+import '../../core/support.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../ui/atmosphere.dart';
 import '../../ui/glass.dart';
 import '../counsellor/chat_controller.dart';
 import '../counsellor/engine.dart';
+import '../../app/web_frame.dart';
 import '../counsellor/model/model_manager.dart';
 import 'export.dart';
 
@@ -233,16 +236,17 @@ class SettingsScreen extends ConsumerWidget {
                                 ?.copyWith(fontSize: 15, color: surface.ink2),
                           ),
                           const SizedBox(height: 12),
-                          GlassButton(
-                            label: model.hasModel
-                                ? s.modelRemove
-                                : '${s.modelDownload} · ${model.recommended.sizeLabel}',
-                            primary: !model.hasModel,
-                            icon: model.hasModel
-                                ? Icons.check_circle_outline_rounded
-                                : Icons.download_rounded,
-                            onPressed: () => context.push(Routes.model),
-                          ),
+                          if (modelSupportedHere)
+                            GlassButton(
+                              label: model.hasModel
+                                  ? s.modelRemove
+                                  : '${s.modelDownload} · ${model.recommended.sizeLabel}',
+                              primary: !model.hasModel,
+                              icon: model.hasModel
+                                  ? Icons.check_circle_outline_rounded
+                                  : Icons.download_rounded,
+                              onPressed: () => context.push(Routes.model),
+                            ),
                           const SizedBox(height: 12),
                           // The bundled typefaces are SIL OFL, and the Gemma
                           // Terms of Use will require attribution here too.
@@ -260,6 +264,46 @@ class SettingsScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
+                    // Deliberately below the model card and above the legal
+                    // footer: findable, never in the way, and nowhere near
+                    // the helplines.
+                    if (SupportLink.isSafe) ...[
+                      const SizedBox(height: 12),
+                      GlassPanel(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Eyebrow(s.support),
+                            const SizedBox(height: 8),
+                            Text(
+                              s.supportBody,
+                              style: t.bodySmall?.copyWith(
+                                fontSize: 15,
+                                color: surface.ink2,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            GlassButton(
+                              label: s.supportAction,
+                              primary: false,
+                              icon: Icons.favorite_border_rounded,
+                              onPressed: () async {
+                                final ok = await launchUrl(
+                                  Uri.parse(SupportLink.url.trim()),
+                                  mode: LaunchMode.externalApplication,
+                                ).catchError((Object _) => false);
+                                if (ok || !context.mounted) return;
+                                ScaffoldMessenger.of(context)
+                                  ..hideCurrentSnackBar()
+                                  ..showSnackBar(
+                                    SnackBar(content: Text(s.supportFailed)),
+                                  );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     Column(
                       children: [

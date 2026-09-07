@@ -51,6 +51,20 @@ class S {
   String get startEnglish => 'Start in English';
   String get startHindi => 'हिंदी में शुरू करें';
 
+  // ── Web build ─────────────────────────────────────────────────────────────
+  String get webPreviewBanner => _t(
+        'A preview. The counsellor here gives sample replies — the real one runs on your phone, offline.',
+        'यह एक झलक है। यहाँ काउंसलर के जवाब नमूने हैं — असली काउंसलर आपके फ़ोन पर, बिना इंटरनेट चलता है।',
+      );
+  String get webPreviewShort => _t(
+        'Preview — sample replies, not the real counsellor.',
+        'झलक — नमूने के जवाब, असली काउंसलर नहीं।',
+      );
+  String get webWhyNoModel => _t(
+        'The counsellor is a model that runs on your phone. A browser is the wrong place for a download that size, so this preview uses written sample replies instead. Everything else here is the real app.',
+        'काउंसलर एक मॉडल है जो आपके फ़ोन पर चलता है। इतने बड़े डाउनलोड के लिए ब्राउज़र सही जगह नहीं, इसलिए इस झलक में लिखे हुए नमूना जवाब हैं। बाक़ी सब असली ऐप ही है।',
+      );
+
   // ── Common ────────────────────────────────────────────────────────────────
   String get continueLabel => _t('Continue', 'आगे');
   String get cancel => _t('Cancel', 'रहने दें');
@@ -518,6 +532,18 @@ class S {
       );
   String get appLockFailed => _t('That did not match. Try again.',
       'यह मेल नहीं खाया। दोबारा कोशिश कीजिए।');
+
+  // ── Supporting Saath ──────────────────────────────────────────────────────
+  String get support => _t('Support Saath', 'साथ का साथ दीजिए');
+  String get supportBody => _t(
+        'Saath is free and has no ads, because an ad company has no business sitting next to your relationship. If it has been useful and you can spare something, that is what keeps it going. If you cannot, use it anyway — that is the point.',
+        'साथ मुफ़्त है और इसमें कोई विज्ञापन नहीं, क्योंकि आपके रिश्ते के पास किसी विज्ञापन कंपनी का कोई काम नहीं। अगर यह काम आया हो और आप कुछ दे सकें, तो उसी से यह चलता रहेगा। न दे सकें, तो भी इस्तेमाल कीजिए — मक़सद यही है।',
+      );
+  String get supportAction => _t('Chip in', 'योगदान दें');
+  String get supportFailed => _t(
+        'Could not open that. No harm done.',
+        'यह खुल नहीं पाया। कोई बात नहीं।',
+      );
 
   // ── Settings ──────────────────────────────────────────────────────────────
   String get settings => _t('Settings', 'सेटिंग्स');

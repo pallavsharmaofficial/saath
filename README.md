@@ -8,6 +8,10 @@ offline. Flutter, iOS 16+ and Android 10+.
 > encryption, sync — and a host to serve the model files from. See
 > [docs/LAUNCH-READINESS.md](docs/LAUNCH-READINESS.md).
 
+**Going live costs ₹0 for the web, $25 once for Play, $99/year for iOS.**
+[docs/GO-LIVE.md](docs/GO-LIVE.md) has the zero-cost path and an honest answer
+about revenue.
+
 ## Run it
 
 ```bash
@@ -26,7 +30,7 @@ flutter test                                     # 242 tests
 
 ```
 lib/
-  app/        router (one stable GoRouter), tab shell, lock gate, MaterialApp
+  app/        router (one stable GoRouter), tab shell, lock gate, web frame
   theme/      tokens (palette, SurfaceTokens, StageTokens), typography, ThemeData
   ui/         Atmosphere (photo + veil + fades), Frost/glass, text prompt
   core/       app state, journal, couple space, app lock, key-value store,
@@ -113,6 +117,18 @@ fails if any `_t()` pair is empty, identical, or missing Devanagari.
   only**.
 - Type "afraid of him" in the counsellor to see the safety interrupt.
 
+## Web
+
+`flutter build web --release` works, and the app frames itself to phone width
+in a desktop browser. The web build deliberately has **no model** — a browser
+is the wrong place for a 3.7 GB download — so the counsellor there runs the
+scripted preview, and a banner says so on every screen. A relationship app that
+took a real problem and answered with a canned line without saying so would be
+a lie told to someone at a bad moment.
+
+`.github/workflows/web.yml` deploys it to GitHub Pages for free on every push.
+
 ## Releasing
 
-See [docs/RELEASE.md](docs/RELEASE.md).
+See [docs/RELEASE.md](docs/RELEASE.md) for the store builds and
+[docs/GO-LIVE.md](docs/GO-LIVE.md) for the free ones.

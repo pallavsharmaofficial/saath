@@ -75,11 +75,21 @@ So the smallest realistic path to a working counsellor is roughly **670 MB**:
 an ~85 MB install, then a 584 MB download. That is a real barrier in the
 market this is aimed at, and it is worth a decision rather than a shrug.
 
-The one lever that has not been pulled: excluding `libQnnHtp*Skel.so` via
-`packagingOptions.jniLibs.excludes` would cut about 40 MB from the install, at
-the cost of Qualcomm NPU acceleration — on a market that is largely Snapdragon,
-that is a straight trade of download size against tokens per second. Measure it
-on the week-1 spike devices before deciding.
+That lever now exists and is measured. `-PsaathExcludeQnn=true` drops the
+Qualcomm NPU delegate libraries:
+
+| Build | APK |
+|---|---|
+| Default | 134 MB |
+| `-PsaathExcludeQnn=true` | 77 MB |
+
+57 MB, at the cost of NPU acceleration on Snapdragon — which is most of this
+market. It is off by default because a counsellor that answers slowly is a
+worse product than a larger download. Measure tokens/sec on the week-1 spike
+devices before making it permanent either way.
+
+For zero-cost distribution and the honest version of the money question, see
+[GO-LIVE.md](GO-LIVE.md).
 
 ## iOS
 

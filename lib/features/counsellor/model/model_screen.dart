@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router.dart';
+import '../../../app/web_frame.dart';
 import '../../../core/app_state.dart';
 import '../../../core/strings.dart';
 import '../../../theme/theme.dart';
@@ -61,7 +62,25 @@ class ModelScreen extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(24, 6, 24, 24),
                   children: [
-                    if (model.hasModel)
+                    if (!modelSupportedHere)
+                      // The browser cannot run this at all. Offering a
+                      // download button that could never work would be worse
+                      // than saying so.
+                      GlassPanel(
+                        strong: true,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Eyebrow(s.counsellorModel),
+                            const SizedBox(height: 8),
+                            Text(
+                              s.webWhyNoModel,
+                              style: t.bodyLarge?.copyWith(color: surface.ink2),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (model.hasModel)
                       _Installed(s: s, state: model)
                     else ...[
                       Text(s.modelTitle, style: t.headlineMedium),
@@ -109,7 +128,9 @@ class ModelScreen extends ConsumerWidget {
                 ),
                 child: Column(
                   children: [
-                    if (model.isDownloading)
+                    if (!modelSupportedHere)
+                      const SizedBox.shrink()
+                    else if (model.isDownloading)
                       GlassButton(
                         label: s.modelCancel,
                         primary: false,
@@ -132,11 +153,17 @@ class ModelScreen extends ConsumerWidget {
                     const SizedBox(height: 10),
                     if (model.hasModel || duringOnboarding)
                       GlassButton(
-                        label: model.hasModel ? s.done : s.modelLater,
-                        primary: model.hasModel,
+                        // "Not now" implies something to postpone. On web
+                        // there is nothing to postpone.
+                        label: !modelSupportedHere
+                            ? s.continueLabel
+                            : (model.hasModel ? s.done : s.modelLater),
+                        primary: model.hasModel || !modelSupportedHere,
                         onPressed: finish,
                       ),
-                    if (duringOnboarding && !model.hasModel) ...[
+                    if (duringOnboarding &&
+                        !model.hasModel &&
+                        modelSupportedHere) ...[
                       const SizedBox(height: 10),
                       Text(
                         s.modelSkipNote,
