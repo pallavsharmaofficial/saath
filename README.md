@@ -5,12 +5,7 @@ offline. Flutter, iOS 16+ and Android 10+.
 
 > **What this build is:** everything that works on one phone, including the
 > on-device Gemma counsellor. What is missing is the couple layer — pairing,
-> encryption, sync — and a host to serve the model files from. See
-> [docs/LAUNCH-READINESS.md](docs/LAUNCH-READINESS.md).
-
-**Going live costs ₹0 for the web, $25 once for Play, $99/year for iOS.**
-[docs/GO-LIVE.md](docs/GO-LIVE.md) has the zero-cost path and an honest answer
-about revenue.
+> encryption and sync — and a host to serve the model files from.
 
 ## Run it
 
@@ -40,7 +35,7 @@ lib/
 assets/
   backgrounds/  placeholder colour fields — swap for real photos, same filenames
   fonts/        Sora, Source Serif 4, Noto Serif Devanagari (subset, variable)
-docs/         RELEASE.md, LAUNCH-READINESS.md, ACCESSIBILITY.md
+docs/         RELEASE.md, ACCESSIBILITY.md
 test/         unit + widget tests; test/support/harness.dart boots the real app
 ```
 
@@ -130,5 +125,4 @@ a lie told to someone at a bad moment.
 
 ## Releasing
 
-See [docs/RELEASE.md](docs/RELEASE.md) for the store builds and
-[docs/GO-LIVE.md](docs/GO-LIVE.md) for the free ones.
+See [docs/RELEASE.md](docs/RELEASE.md).

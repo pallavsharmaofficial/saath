@@ -101,8 +101,8 @@ enum SaathModel {
 ///
 /// Left empty, Saath falls back to Hugging Face, which needs
 /// `--dart-define=HUGGINGFACE_TOKEN=...` because both repos are gated. That is
-/// fine for development and is **not** how this should ship: see
-/// docs/LAUNCH-READINESS.md.
+/// fine for development and is **not** how this should ship — point
+/// [baseUrl] at a host you control.
 class ModelHosting {
   ModelHosting._();
 

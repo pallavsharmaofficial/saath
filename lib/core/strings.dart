@@ -172,7 +172,7 @@ class S {
   String get modelSmallName =>
       _t('Lighter, works on 4 GB', 'हल्का, 4 GB पर चलता है');
   String get modelNotConfigured => _t(
-        'This build has no download host configured, so the counsellor stays in preview. See docs/LAUNCH-READINESS.md.',
+        'This build has no download host configured, so the counsellor stays in preview.',
         'इस बिल्ड में डाउनलोड होस्ट सेट नहीं है, इसलिए काउंसलर प्रीव्यू में ही रहेगा।',
       );
   String get modelFailed =>

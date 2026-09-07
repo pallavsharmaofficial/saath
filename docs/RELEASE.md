@@ -88,8 +88,6 @@ market. It is off by default because a counsellor that answers slowly is a
 worse product than a larger download. Measure tokens/sec on the week-1 spike
 devices before making it permanent either way.
 
-For zero-cost distribution and the honest version of the money question, see
-[GO-LIVE.md](GO-LIVE.md).
 
 ## iOS
 
@@ -121,5 +119,7 @@ silently late if it is missing.
 
 ## Still open before a public launch
 
-See `docs/LAUNCH-READINESS.md`. In short: the counsellor is a scripted preview
-engine, there is no pairing, and 20 of the 28 planned screens do not exist yet.
+The counsellor needs a host to download model files from — see
+`ModelHosting` in `lib/features/counsellor/model/model_catalogue.dart`. Without
+one the app runs its scripted preview engine and says so in Settings. Pairing
+and encrypted couple sync are not built.
