@@ -75,6 +75,7 @@ jobs:
           flutter build apk --release \
             --target-platform android-arm64 \
             ${{ vars.SAATH_MODEL_BASE_URL && format('--dart-define=SAATH_MODEL_BASE_URL={0}', vars.SAATH_MODEL_BASE_URL) || '' }} \
+            ${{ vars.SAATH_MODEL_IDS && format('--dart-define=SAATH_MODEL_IDS={0}', vars.SAATH_MODEL_IDS) || '' }} \
             ${{ vars.SAATH_SUPPORT_URL && format('--dart-define=SAATH_SUPPORT_URL={0}', vars.SAATH_SUPPORT_URL) || '' }}
           mv build/app/outputs/flutter-apk/app-release.apk saath-${{ github.ref_name }}.apk
 

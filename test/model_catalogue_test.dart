@@ -32,6 +32,28 @@ void main() {
     });
   });
 
+  group('availability', () {
+    test('defaults to every model when no host subset is declared', () {
+      // The default build defines nothing, so all three are offered.
+      expect(SaathModel.available, SaathModel.values);
+    });
+
+    test('recommendedFor only ever returns something available', () {
+      for (final ram in [null, 0, 2048, 4096, 6144, 16384]) {
+        expect(SaathModel.available, contains(SaathModel.recommendedFor(ram)));
+      }
+    });
+
+    test('picks the smallest available model when RAM is unknown', () {
+      // Shipping a 3.7 GB download to a phone that cannot hold it is the
+      // worse failure, so unknown RAM must never land on the big one.
+      final smallest = SaathModel.values.reduce(
+        (a, b) => a.bytes <= b.bytes ? a : b,
+      );
+      expect(SaathModel.recommendedFor(null), smallest);
+    });
+  });
+
   group('engine types', () {
     test('each model declares the chat template its family needs', () {
       // The wrong template does not fail loudly, it just answers worse.

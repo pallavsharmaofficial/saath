@@ -103,16 +103,39 @@ enum SaathModel {
     return '${base.endsWith('/') ? base.substring(0, base.length - 1) : base}/$fileName';
   }
 
+  /// The models this build can actually download.
+  ///
+  /// A host usually carries a subset — the Gemma repos are gated, so a release
+  /// built from a GitHub-hosted mirror may only have the ungated one. Offering
+  /// a model the host does not have produces a 404 on the first thing a user
+  /// ever taps, so the catalogue is narrowed to what is really there.
+  ///
+  /// Empty [ModelHosting.availableIds] means "all of them", which is right for
+  /// a build pointed at Hugging Face with a token.
+  static List<SaathModel> get available {
+    final ids = ModelHosting.availableIds;
+    if (ids.isEmpty) return values;
+    final subset = [
+      for (final m in values)
+        if (ids.contains(m.id)) m,
+    ];
+    // Never return nothing: a typo in the define would otherwise leave the
+    // model screen blank with no way to tell why.
+    return subset.isEmpty ? values : subset;
+  }
+
   /// The model recommended for a device with [ramMb] of physical RAM.
   ///
-  /// Falls back to the small model when RAM is unknown: shipping a 3.7 GB
-  /// download to a phone that cannot hold it is the worse failure.
+  /// Falls back to the smallest available model when RAM is unknown: shipping
+  /// a 3.7 GB download to a phone that cannot hold it is the worse failure.
   static SaathModel recommendedFor(int? ramMb) {
-    if (ramMb == null) return SaathModel.gemma31B;
-    for (final m in values) {
+    final options = available;
+    final smallest = options.reduce((a, b) => a.bytes <= b.bytes ? a : b);
+    if (ramMb == null) return smallest;
+    for (final m in options) {
       if (ramMb >= m.minRamMb) return m;
     }
-    return SaathModel.gemma31B;
+    return smallest;
   }
 
   static SaathModel? byId(String? id) {
@@ -141,6 +164,17 @@ class ModelHosting {
 
   static const baseUrl = String.fromEnvironment('SAATH_MODEL_BASE_URL');
   static const huggingFaceToken = String.fromEnvironment('HUGGINGFACE_TOKEN');
+
+  /// Comma-separated [SaathModel.id]s the configured host actually serves.
+  /// Empty means all of them.
+  ///
+  ///     --dart-define=SAATH_MODEL_IDS=qwen-2.5-1.5b-q8
+  static const _modelIds = String.fromEnvironment('SAATH_MODEL_IDS');
+
+  static Set<String> get availableIds => {
+        for (final id in _modelIds.split(','))
+          if (id.trim().isNotEmpty) id.trim(),
+      };
 
   /// True when the build is pointed at a host that can actually serve the
   /// files without a per-user token.

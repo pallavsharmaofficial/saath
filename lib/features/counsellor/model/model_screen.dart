@@ -203,14 +203,14 @@ class _Chooser extends ConsumerWidget {
         children: [
           Eyebrow(s.modelChoose),
           const SizedBox(height: 10),
-          for (final m in SaathModel.values) ...[
+          for (final m in SaathModel.available) ...[
             _ModelRow(
               s: s,
               model: m,
               selected: state.recommended == m,
               onTap: () => ref.read(modelManagerProvider.notifier).choose(m),
             ),
-            if (m != SaathModel.values.last)
+            if (m != SaathModel.available.last)
               Divider(color: surface.hairline, height: 18),
           ],
           if (state.deviceRamMb != null) ...[
